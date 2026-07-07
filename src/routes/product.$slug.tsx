@@ -100,7 +100,7 @@ function ProductPage() {
                 </div>
               </div>
               <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                {p.certifications.map((c) => (
+                {p.certifications.map((c: string) => (
                   <div key={c} className="flex items-center justify-between rounded-xl border border-border p-3">
                     <div className="flex items-center gap-2 text-sm"><FileCheck className="h-4 w-4 text-primary" /> {c}</div>
                     <button className="text-xs inline-flex items-center gap-1 text-primary hover:underline"><Download className="h-3 w-3" /> Download</button>
