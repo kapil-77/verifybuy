@@ -73,7 +73,7 @@ function ProductPage() {
 
           <Section title="Ingredients">
             <div className="flex flex-wrap gap-2">
-              {p.ingredients.map((i) => <span key={i} className="rounded-full bg-muted px-3 py-1 text-sm">{i}</span>)}
+              {p.ingredients.map((i: string) => <span key={i} className="rounded-full bg-muted px-3 py-1 text-sm">{i}</span>)}
             </div>
           </Section>
 
