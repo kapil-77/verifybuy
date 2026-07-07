@@ -81,11 +81,11 @@ function ProductPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="card-soft p-5">
                 <div className="text-success font-medium text-sm">Pros</div>
-                <ul className="mt-2 space-y-1.5 text-sm text-text-secondary">{p.pros.map((x) => <li key={x}>✓ {x}</li>)}</ul>
+                <ul className="mt-2 space-y-1.5 text-sm text-text-secondary">{p.pros.map((x: string) => <li key={x}>✓ {x}</li>)}</ul>
               </div>
               <div className="card-soft p-5">
                 <div className="text-danger font-medium text-sm">Cons</div>
-                <ul className="mt-2 space-y-1.5 text-sm text-text-secondary">{p.cons.map((x) => <li key={x}>✗ {x}</li>)}</ul>
+                <ul className="mt-2 space-y-1.5 text-sm text-text-secondary">{p.cons.map((x: string) => <li key={x}>✗ {x}</li>)}</ul>
               </div>
             </div>
           </Section>
