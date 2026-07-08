@@ -5,6 +5,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  ClientOnly,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -89,7 +90,7 @@ function RootComponent() {
         <main className="flex-1"><Outlet /></main>
         <Footer />
         <Toaster position="bottom-right" />
-        <VoiceAssistant />
+        <ClientOnly fallback={null}><VoiceAssistant /></ClientOnly>
       </div>
     </QueryClientProvider>
   );
