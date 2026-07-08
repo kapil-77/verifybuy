@@ -16,6 +16,7 @@ import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
+import { Route as ApiElevenlabsTokenRouteImport } from './routes/api/elevenlabs.token'
 
 const RewardsRoute = RewardsRouteImport.update({
   id: '/rewards',
@@ -52,6 +53,11 @@ const ProductSlugRoute = ProductSlugRouteImport.update({
   path: '/product/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiElevenlabsTokenRoute = ApiElevenlabsTokenRouteImport.update({
+  id: '/api/elevenlabs/token',
+  path: '/api/elevenlabs/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/compare': typeof CompareRoute
   '/rewards': typeof RewardsRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/api/elevenlabs/token': typeof ApiElevenlabsTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/compare': typeof CompareRoute
   '/rewards': typeof RewardsRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/api/elevenlabs/token': typeof ApiElevenlabsTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/compare': typeof CompareRoute
   '/rewards': typeof RewardsRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/api/elevenlabs/token': typeof ApiElevenlabsTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/rewards'
     | '/product/$slug'
+    | '/api/elevenlabs/token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/rewards'
     | '/product/$slug'
+    | '/api/elevenlabs/token'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/rewards'
     | '/product/$slug'
+    | '/api/elevenlabs/token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   CompareRoute: typeof CompareRoute
   RewardsRoute: typeof RewardsRoute
   ProductSlugRoute: typeof ProductSlugRoute
+  ApiElevenlabsTokenRoute: typeof ApiElevenlabsTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/elevenlabs/token': {
+      id: '/api/elevenlabs/token'
+      path: '/api/elevenlabs/token'
+      fullPath: '/api/elevenlabs/token'
+      preLoaderRoute: typeof ApiElevenlabsTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareRoute: CompareRoute,
   RewardsRoute: RewardsRoute,
   ProductSlugRoute: ProductSlugRoute,
+  ApiElevenlabsTokenRoute: ApiElevenlabsTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
