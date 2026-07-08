@@ -1,4 +1,4 @@
-import { useConversation } from "@elevenlabs/react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { useNavigate } from "@tanstack/react-router";
 import { Mic, MicOff, Loader2, X } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -7,6 +7,14 @@ import { toast } from "sonner";
 const AGENT_ID = "agent_5001kx0meymyf1f8kg0tnm5ry3am";
 
 export function VoiceAssistant() {
+  return (
+    <ConversationProvider>
+      <VoiceAssistantPanel />
+    </ConversationProvider>
+  );
+}
+
+function VoiceAssistantPanel() {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
   const [expanded, setExpanded] = useState(false);
