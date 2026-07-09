@@ -42,7 +42,7 @@ export function Navbar() {
           <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-white shadow-glow">
             <Sparkles className="h-5 w-5" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">ComparePrime</span>
+          <span className="text-lg font-semibold tracking-tight">VeriFy</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1 ml-4">

@@ -15,6 +15,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/sonner";
 import { VoiceAssistant } from "@/components/VoiceAssistant";
+import { CompareBar } from "@/components/CompareBar";
 
 function NotFoundComponent() {
   return (
@@ -51,9 +52,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ComparePrime — Compare & Buy Smarter Across Every Store" },
+      { title: "VeriFy — Compare & Buy Smarter Across Every Store" },
       { name: "description", content: "Compare products across leading eCommerce sites with verified authenticity, lab reports, and AI-powered guidance." },
-      { property: "og:title", content: "ComparePrime — Compare & Buy Smarter" },
+      { property: "og:title", content: "VeriFy — Compare & Buy Smarter" },
       { property: "og:description", content: "Verified authenticity, lab reports and AI-powered product comparison." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -90,6 +91,7 @@ function RootComponent() {
         <main className="flex-1"><Outlet /></main>
         <Footer />
         <Toaster position="bottom-right" />
+        <ClientOnly fallback={null}><CompareBar /></ClientOnly>
         <ClientOnly fallback={null}><VoiceAssistant /></ClientOnly>
       </div>
     </QueryClientProvider>

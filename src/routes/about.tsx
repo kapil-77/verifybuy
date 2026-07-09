@@ -8,7 +8,7 @@ function AboutPage() {
     <div className="mx-auto max-w-4xl px-6 py-16">
       <div className="text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-xs text-text-secondary">
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> About ComparePrime
+          <Sparkles className="h-3.5 w-3.5 text-primary" /> About VeriFy
         </div>
         <h1 className="mt-5 text-5xl font-semibold tracking-tight">Shop with certainty.</h1>
         <p className="mt-4 text-lg text-text-secondary">
