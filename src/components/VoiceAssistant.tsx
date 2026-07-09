@@ -69,15 +69,26 @@ function VoiceAssistantPanel() {
   const start = useCallback(async () => {
     setConnecting(true);
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        const name = (err as DOMException)?.name;
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          toast.error("Microphone blocked. Enable it in your browser's site settings and reload.");
+        } else if (name === "NotFoundError") {
+          toast.error("No microphone found on this device.");
+        } else if (name === "NotReadableError") {
+          toast.error("Microphone is in use by another app.");
+        } else {
+          toast.error("Couldn't access microphone.");
+        }
+        return;
+      }
       const res = await fetch("/api/elevenlabs/token", { method: "POST" });
       if (!res.ok) throw new Error(`Token failed: ${res.status}`);
       const { token, error } = (await res.json()) as { token?: string; error?: string };
       if (!token) throw new Error(error || "No token");
-      await conversation.startSession({
-        conversationToken: token,
-        connectionType: "webrtc",
-      });
+      await conversation.startSession({ conversationToken: token, connectionType: "webrtc" });
       setExpanded(true);
     } catch (e) {
       console.error(e);
