@@ -1,133 +1,316 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { X, Plus, BadgeCheck, Star, Sparkles } from "lucide-react";
-import { products } from "@/lib/data";
+import { useMemo, type ReactNode } from "react";
+import { X, Plus, BadgeCheck, Star, Sparkles, Check, Minus } from "lucide-react";
+import { products, type Product } from "@/lib/data";
 import { useApp, formatPrice } from "@/lib/store";
-import { useMemo } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/compare")({ component: ComparePage });
+
+type Row = {
+  label: string;
+  render: (p: Product) => ReactNode;
+  compare?: "min" | "max";
+  numeric?: (p: Product) => number;
+};
 
 function ComparePage() {
   const { compare, toggleCompare, clearCompare, currency } = useApp();
   const selected = useMemo(() => products.filter((p) => compare.includes(p.id)), [compare]);
   const available = products.filter((p) => !compare.includes(p.id));
 
-  const rows: { label: string; get: (p: typeof products[0]) => React.ReactNode; highlight?: "min" | "max" }[] = [
-    { label: "Price", get: (p) => formatPrice(p.price, currency), highlight: "min" },
-    { label: "Website", get: (p) => p.website },
-    { label: "Rating", get: (p) => <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-warning text-warning" /> {p.rating}</span>, highlight: "max" },
-    { label: "Serving Size", get: (p) => p.servingSize },
-    { label: "Protein", get: (p) => `${p.protein}g`, highlight: "max" },
-    { label: "Carbs", get: (p) => `${p.carbs}g` },
-    { label: "Fat", get: (p) => `${p.fat}g` },
-    { label: "Fiber", get: (p) => `${p.fiber}g` },
-    { label: "Sugar", get: (p) => `${p.sugar}g`, highlight: "min" },
-    { label: "Calories", get: (p) => p.calories },
-    { label: "Ingredients", get: (p) => <div className="text-xs text-text-secondary">{p.ingredients.slice(0, 4).join(", ")}</div> },
-    { label: "Country", get: (p) => p.country },
-    { label: "Manufacturer", get: (p) => <span className="text-xs">{p.manufacturer}</span> },
-    { label: "Lab Tested", get: (p) => p.labTested ? <span className="inline-flex items-center gap-1 text-success"><BadgeCheck className="h-4 w-4" /> Yes</span> : "No" },
-    { label: "Certifications", get: (p) => <div className="flex flex-wrap gap-1">{p.certifications.map((c) => <span key={c} className="rounded-full bg-muted px-2 py-0.5 text-[10px]">{c}</span>)}</div> },
-    { label: "Best For", get: (p) => <span className="text-xs">{p.bestFor}</span> },
-    { label: "Pros", get: (p) => <ul className="text-xs text-text-secondary space-y-0.5">{p.pros.map((x) => <li key={x}>• {x}</li>)}</ul> },
-    { label: "Cons", get: (p) => <ul className="text-xs text-text-secondary space-y-0.5">{p.cons.map((x) => <li key={x}>• {x}</li>)}</ul> },
-    { label: "Warnings", get: (p) => <span className="text-xs text-warning">{p.warnings}</span> },
-  ];
-
-  function highlightFor(row: typeof rows[number], values: (string | number)[]): (v: string | number) => boolean {
-    if (!row.highlight) return () => false;
-    const nums = values.map((v) => parseFloat(String(v).replace(/[^0-9.-]/g, "")));
-    if (nums.some(isNaN)) return () => false;
-    const target = row.highlight === "min" ? Math.min(...nums) : Math.max(...nums);
-    return (v) => parseFloat(String(v).replace(/[^0-9.-]/g, "")) === target;
-  }
-
   return (
-    <div className="mx-auto max-w-7xl px-6 py-14">
-      <div className="flex items-end justify-between flex-wrap gap-4">
+    <div className="mx-auto max-w-7xl px-6 py-14 pb-32">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight">Compare Products</h1>
-          <p className="mt-2 text-text-secondary">Side-by-side comparison with ingredient, nutrition and authenticity details.</p>
+          <p className="mt-2 text-text-secondary">
+            Side-by-side with ingredients, nutrition and authenticity details.
+          </p>
         </div>
         {selected.length > 0 && (
-          <button onClick={clearCompare} className="text-sm text-text-secondary hover:text-danger transition">Clear all</button>
+          <button onClick={clearCompare} className="text-sm text-text-secondary hover:text-danger transition">
+            Clear all
+          </button>
         )}
-      </div>
+      </header>
 
       {selected.length === 0 ? (
-        <div className="mt-10 card-soft p-12 text-center">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary"><Sparkles className="h-6 w-6" /></div>
-          <h3 className="mt-4 text-lg font-semibold">Nothing to compare yet</h3>
-          <p className="mt-1 text-text-secondary text-sm">Add products from any card's Compare button. Compare up to 4 at once.</p>
-          <Link to="/categories" className="mt-6 inline-flex h-10 items-center rounded-full gradient-primary px-6 text-sm font-medium text-white">Browse products</Link>
-        </div>
+        <EmptyState />
       ) : (
-        <div className="mt-10 card-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white border-b border-border z-10">
-                <tr>
-                  <th className="text-left p-4 w-48 text-text-muted font-medium">Attribute</th>
-                  {selected.map((p) => (
-                    <th key={p.id} className="p-4 min-w-[240px] text-left align-top">
-                      <div className="relative">
-                        <button onClick={() => toggleCompare(p.id)} className="absolute -top-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-muted hover:bg-danger hover:text-white transition"><X className="h-3 w-3" /></button>
-                        <img src={p.image} alt="" className="h-24 w-24 rounded-lg object-cover" />
-                        <div className="mt-2 text-xs text-text-muted uppercase">{p.brand}</div>
-                        <div className="font-medium leading-snug">{p.title}</div>
+        <section className="mt-10 space-y-8">
+          <ProductHeaderRow selected={selected} onRemove={toggleCompare} />
+
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+              <TabsTrigger value="proscons">Pros & Cons</TabsTrigger>
+              <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="mt-6">
+              <CompareTable
+                selected={selected}
+                rows={[
+                  { label: "Price", render: (p) => formatPrice(p.price, currency), compare: "min", numeric: (p) => p.price },
+                  { label: "Website", render: (p) => p.website },
+                  {
+                    label: "Rating",
+                    render: (p) => (
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 fill-warning text-warning" /> {p.rating}
+                      </span>
+                    ),
+                    compare: "max",
+                    numeric: (p) => p.rating,
+                  },
+                  { label: "Serving Size", render: (p) => p.servingSize },
+                  { label: "Best For", render: (p) => p.bestFor },
+                  { label: "Country", render: (p) => p.country },
+                  { label: "Manufacturer", render: (p) => p.manufacturer },
+                  {
+                    label: "Lab Tested",
+                    render: (p) =>
+                      p.labTested ? (
+                        <span className="inline-flex items-center gap-1 text-success">
+                          <BadgeCheck className="h-4 w-4" /> Yes
+                        </span>
+                      ) : (
+                        <span className="text-text-muted">No</span>
+                      ),
+                  },
+                  {
+                    label: "Certifications",
+                    render: (p) => (
+                      <div className="flex flex-wrap gap-1">
+                        {p.certifications.map((c) => (
+                          <span key={c} className="rounded-full bg-muted px-2 py-0.5 text-[10px]">{c}</span>
+                        ))}
                       </div>
-                    </th>
-                  ))}
-                  {selected.length < 4 && (
-                    <th className="p-4 min-w-[200px] align-top">
-                      <div className="grid h-24 w-24 place-items-center rounded-lg border-2 border-dashed border-border text-text-muted"><Plus /></div>
-                      <div className="mt-2 text-xs text-text-muted">Add up to {4 - selected.length} more</div>
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const values = selected.map((p) => row.get(p) as any);
-                  const check = highlightFor(row, values as any);
-                  return (
-                    <tr key={row.label} className="border-t border-border hover:bg-muted/40">
-                      <td className="p-4 text-text-secondary font-medium">{row.label}</td>
-                      {values.map((v, i) => {
-                        const isBest = check(v);
-                        return (
-                          <td key={i} className={`p-4 align-top ${isBest ? "bg-success/5" : ""}`}>
-                            <div className="flex items-start gap-2">
-                              <span>{v}</span>
-                              {isBest && <span className="mt-0.5 rounded-full bg-success/15 px-1.5 text-[10px] font-medium text-success">Best</span>}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      {selected.length < 4 && <td />}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    ),
+                  },
+                ]}
+              />
+            </TabsContent>
+
+            <TabsContent value="ingredients" className="mt-6">
+              <IngredientsMatrix selected={selected} />
+            </TabsContent>
+
+            <TabsContent value="proscons" className="mt-6">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {selected.map((p) => (
+                  <div key={p.id} className="card-soft p-5">
+                    <div className="text-xs uppercase text-text-muted">{p.brand}</div>
+                    <div className="font-medium leading-snug">{p.title}</div>
+
+                    <div className="mt-4">
+                      <div className="text-xs font-semibold text-success">PROS</div>
+                      <ul className="mt-2 space-y-1.5 text-sm text-text-secondary">
+                        {p.pros.map((x) => (
+                          <li key={x} className="flex gap-2">
+                            <Check className="h-4 w-4 text-success shrink-0 mt-0.5" /> {x}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="text-xs font-semibold text-danger">CONS</div>
+                      <ul className="mt-2 space-y-1.5 text-sm text-text-secondary">
+                        {p.cons.map((x) => (
+                          <li key={x} className="flex gap-2">
+                            <Minus className="h-4 w-4 text-danger shrink-0 mt-0.5" /> {x}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {p.warnings && (
+                      <p className="mt-4 rounded-lg bg-warning/10 p-2 text-xs text-warning">
+                        ⚠ {p.warnings}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="nutrition" className="mt-6">
+              <CompareTable
+                selected={selected}
+                rows={[
+                  { label: "Calories", render: (p) => p.calories, compare: "min", numeric: (p) => p.calories },
+                  { label: "Protein", render: (p) => `${p.protein}g`, compare: "max", numeric: (p) => p.protein },
+                  { label: "Carbs", render: (p) => `${p.carbs}g`, compare: "min", numeric: (p) => p.carbs },
+                  { label: "Sugar", render: (p) => `${p.sugar}g`, compare: "min", numeric: (p) => p.sugar },
+                  { label: "Fat", render: (p) => `${p.fat}g`, compare: "min", numeric: (p) => p.fat },
+                  { label: "Fiber", render: (p) => `${p.fiber}g`, compare: "max", numeric: (p) => p.fiber },
+                ]}
+              />
+            </TabsContent>
+          </Tabs>
+        </section>
       )}
 
       {selected.length > 0 && available.length > 0 && (
-        <div className="mt-10">
+        <section className="mt-12">
           <h3 className="text-lg font-semibold">Add more to compare</h3>
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             {available.slice(0, 4).map((p) => (
-              <button key={p.id} onClick={() => toggleCompare(p.id)} className="card-soft p-3 text-left hover:border-primary/40 transition">
+              <button
+                key={p.id}
+                onClick={() => toggleCompare(p.id)}
+                className="card-soft p-3 text-left transition hover:border-primary/40"
+              >
                 <img src={p.image} alt="" className="h-24 w-full rounded-md object-cover" />
                 <div className="mt-2 text-xs text-text-muted">{p.brand}</div>
                 <div className="text-sm font-medium line-clamp-2">{p.title}</div>
-                <div className="mt-2 inline-flex items-center gap-1 text-xs text-primary"><Plus className="h-3 w-3" /> Add</div>
+                <div className="mt-2 inline-flex items-center gap-1 text-xs text-primary">
+                  <Plus className="h-3 w-3" /> Add
+                </div>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="mt-10 card-soft p-12 text-center">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
+        <Sparkles className="h-6 w-6" />
+      </div>
+      <h3 className="mt-4 text-lg font-semibold">Nothing to compare yet</h3>
+      <p className="mt-1 text-sm text-text-secondary">
+        Add products from any card. Compare up to 4 at once.
+      </p>
+      <Link
+        to="/categories"
+        className="mt-6 inline-flex h-10 items-center rounded-full gradient-primary px-6 text-sm font-medium text-white"
+      >
+        Browse products
+      </Link>
+    </div>
+  );
+}
+
+function ProductHeaderRow({
+  selected,
+  onRemove,
+}: {
+  selected: Product[];
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {selected.map((p) => (
+        <div key={p.id} className="card-soft relative p-4">
+          <button
+            onClick={() => onRemove(p.id)}
+            aria-label="Remove"
+            className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full bg-muted hover:bg-danger hover:text-white transition"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          <img src={p.image} alt={p.title} className="h-28 w-full rounded-lg object-cover" />
+          <div className="mt-3 text-[11px] uppercase text-text-muted">{p.brand}</div>
+          <div className="font-medium leading-snug line-clamp-2">{p.title}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CompareTable({ selected, rows }: { selected: Product[]; rows: Row[] }) {
+  return (
+    <div className="card-soft overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border bg-muted/40">
+            <tr>
+              <th className="w-48 p-4 text-left font-medium text-text-muted">Attribute</th>
+              {selected.map((p) => (
+                <th key={p.id} className="min-w-[200px] p-4 text-left text-xs font-medium text-text-secondary">
+                  {p.brand}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const best = bestIndex(row, selected);
+              return (
+                <tr key={row.label} className="border-t border-border hover:bg-muted/30">
+                  <td className="p-4 font-medium text-text-secondary">{row.label}</td>
+                  {selected.map((p, i) => (
+                    <td key={p.id} className={`p-4 align-top ${i === best ? "bg-success/5" : ""}`}>
+                      <div className="flex items-start gap-2">
+                        <span>{row.render(p)}</span>
+                        {i === best && (
+                          <span className="mt-0.5 rounded-full bg-success/15 px-1.5 text-[10px] font-medium text-success">
+                            Best
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function bestIndex(row: Row, selected: Product[]): number {
+  if (!row.compare || !row.numeric) return -1;
+  const values = selected.map(row.numeric);
+  const target = row.compare === "min" ? Math.min(...values) : Math.max(...values);
+  return values.indexOf(target);
+}
+
+function IngredientsMatrix({ selected }: { selected: Product[] }) {
+  const all = Array.from(new Set(selected.flatMap((p) => p.ingredients))).sort();
+
+  return (
+    <div className="card-soft overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border bg-muted/40">
+            <tr>
+              <th className="p-4 text-left font-medium text-text-muted">Ingredient</th>
+              {selected.map((p) => (
+                <th key={p.id} className="min-w-[160px] p-4 text-left text-xs font-medium text-text-secondary">
+                  {p.brand}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {all.map((ing) => (
+              <tr key={ing} className="border-t border-border hover:bg-muted/30">
+                <td className="p-3 pl-4 text-text-secondary">{ing}</td>
+                {selected.map((p) => (
+                  <td key={p.id} className="p-3">
+                    {p.ingredients.includes(ing) ? (
+                      <Check className="h-4 w-4 text-success" />
+                    ) : (
+                      <Minus className="h-4 w-4 text-text-muted/40" />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
