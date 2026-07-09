@@ -91,6 +91,7 @@ function RootComponent() {
         <main className="flex-1"><Outlet /></main>
         <Footer />
         <Toaster position="bottom-right" />
+        <ClientOnly fallback={null}><CompareBar /></ClientOnly>
         <ClientOnly fallback={null}><VoiceAssistant /></ClientOnly>
       </div>
     </QueryClientProvider>
