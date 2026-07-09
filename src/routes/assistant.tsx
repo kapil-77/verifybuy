@@ -31,7 +31,7 @@ function replyFor(q: string) {
 
 function AssistantPage() {
   const [messages, setMessages] = useState<Msg[]>([
-    { id: "welcome", role: "assistant", content: "Hi! I'm your **ComparePrime AI Assistant**. Ask me about products, ingredients, nutrition, or shopping decisions." },
+    { id: "welcome", role: "assistant", content: "Hi! I'm your **VeriFy AI Assistant**. Ask me about products, ingredients, nutrition, or shopping decisions." },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -53,7 +53,7 @@ function AssistantPage() {
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="text-center mb-8">
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-xs text-text-secondary">
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> Powered by ComparePrime AI
+          <Sparkles className="h-3.5 w-3.5 text-primary" /> Powered by VeriFy AI
         </div>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight">AI Assistant</h1>
         <p className="mt-2 text-text-secondary">Ask anything about products, nutrition, ingredients or diet.</p>

@@ -51,9 +51,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ComparePrime — Compare & Buy Smarter Across Every Store" },
+      { title: "VeriFy — Compare & Buy Smarter Across Every Store" },
       { name: "description", content: "Compare products across leading eCommerce sites with verified authenticity, lab reports, and AI-powered guidance." },
-      { property: "og:title", content: "ComparePrime — Compare & Buy Smarter" },
+      { property: "og:title", content: "VeriFy — Compare & Buy Smarter" },
       { property: "og:description", content: "Verified authenticity, lab reports and AI-powered product comparison." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

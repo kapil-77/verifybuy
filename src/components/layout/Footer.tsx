@@ -10,7 +10,7 @@ export function Footer() {
             <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-white">
               <Sparkles className="h-5 w-5" />
             </div>
-            <span className="font-semibold text-lg tracking-tight">ComparePrime</span>
+            <span className="font-semibold text-lg tracking-tight">VeriFy</span>
           </div>
           <p className="mt-4 text-sm text-text-secondary max-w-sm">
             Compare products across leading eCommerce sites with verified authenticity, lab reports and AI guidance.
@@ -42,7 +42,7 @@ export function Footer() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto max-w-7xl px-6 py-5 text-xs text-text-muted flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>© {new Date().getFullYear()} ComparePrime. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} VeriFy. All rights reserved.</div>
           <div>Made with care · v1.0</div>
         </div>
       </div>
