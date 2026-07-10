@@ -86,9 +86,9 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col" suppressHydrationWarning>
         <Navbar />
-        <main className="flex-1"><Outlet /></main>
+        <main className="flex-1" suppressHydrationWarning><Outlet /></main>
         <Footer />
         <Toaster position="bottom-right" />
         <ClientOnly fallback={null}><CompareBar /></ClientOnly>
