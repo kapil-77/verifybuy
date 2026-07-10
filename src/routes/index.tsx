@@ -4,8 +4,10 @@ import { ArrowRight, ShieldCheck, Sparkles, TrendingUp, BadgeCheck, Zap } from "
 import { ProductCard } from "@/components/product/ProductCard";
 import { categories, products } from "@/lib/data";
 import { useApp, formatPrice } from "@/lib/store";
+import { StarfieldBackground } from "@/components/StarfieldBackground";
 import { useState } from "react";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -26,13 +28,17 @@ function Home() {
 function Hero() {
   const { currency } = useApp();
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden isolate">
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-24 -left-32 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute top-40 right-0 h-96 w-96 rounded-full bg-secondary/10 blur-3xl" />
+        <StarfieldBackground />
+      </div>
+      <div className="absolute inset-0 -z-10 pointer-events-none">
+        <div className="absolute top-24 -left-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute top-40 right-0 h-96 w-96 rounded-full bg-secondary/20 blur-3xl" />
       </div>
       <div className="mx-auto max-w-7xl px-6 pt-16 pb-24 grid lg:grid-cols-2 gap-16 items-center">
-        <div>
+        <div className="glass rounded-3xl border border-border/60 p-8 shadow-elevated">
+
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-3 py-1.5 text-xs text-text-secondary backdrop-blur">
             <span className="grid h-4 w-4 place-items-center rounded-full bg-success text-white"><BadgeCheck className="h-3 w-3" /></span>
             Verified by 25,000+ shoppers
