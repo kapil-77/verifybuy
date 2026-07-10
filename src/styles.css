@@ -68,7 +68,44 @@
   --text-primary: #111827;
   --text-secondary: #6B7280;
   --text-muted: #9CA3AF;
+  --glass-bg: rgba(255,255,255,0.9);
+  --nav-bg: rgba(255,255,255,0.75);
+  --nav-bg-scrolled: rgba(15,23,42,0.92);
+  --nav-fg-scrolled: #F8FAFC;
 }
+
+.dark {
+  --background: #0B1020;
+  --foreground: #E5E7EB;
+  --card: #111827;
+  --card-foreground: #E5E7EB;
+  --popover: #111827;
+  --popover-foreground: #E5E7EB;
+  --primary: #6366F1;
+  --primary-foreground: #FFFFFF;
+  --secondary: #8B5CF6;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1F2937;
+  --muted-foreground: #9CA3AF;
+  --accent: #38BDF8;
+  --accent-foreground: #0B1020;
+  --destructive: #F87171;
+  --destructive-foreground: #0B1020;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger: #F87171;
+  --border: #1F2937;
+  --input: #1F2937;
+  --ring: #6366F1;
+  --text-primary: #E5E7EB;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --glass-bg: rgba(17,24,39,0.75);
+  --nav-bg: rgba(11,16,32,0.7);
+  --nav-bg-scrolled: rgba(2,6,23,0.95);
+  --nav-fg-scrolled: #F8FAFC;
+}
+
 
 @layer base {
   * { border-color: var(--color-border); }
@@ -82,9 +119,10 @@
 }
 
 @utility glass {
-  background: rgba(255,255,255,0.9);
+  background: var(--glass-bg);
   backdrop-filter: saturate(180%) blur(16px);
 }
+
 
 @utility card-soft {
   background: var(--card);
