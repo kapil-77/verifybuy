@@ -16,6 +16,8 @@ import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/sonner";
 import { VoiceAssistant } from "@/components/VoiceAssistant";
 import { CompareBar } from "@/components/CompareBar";
+import { ThemeProvider, themeBootstrapScript } from "@/hooks/useTheme";
+
 
 function NotFoundComponent() {
   return (
