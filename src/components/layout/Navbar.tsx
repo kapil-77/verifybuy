@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Search, Gift, User, Sparkles, ChevronDown, Moon } from "lucide-react";
+import { Search, Gift, User, Sparkles, ChevronDown, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
 import { currencies, products } from "@/lib/data";
@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useScrolled } from "@/hooks/useScrolled";
+import { useTheme } from "@/hooks/useTheme";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -24,6 +26,9 @@ const nav = [
 export function Navbar() {
   const { currency, setCurrency, points, coins } = useApp();
   const [q, setQ] = useState("");
+  const scrolled = useScrolled(80);
+  const { theme, toggle } = useTheme();
+
   const suggestions =
     q.length > 0
       ? products
@@ -36,7 +41,11 @@ export function Navbar() {
       : [];
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border/70">
+    <header
+      className={`sticky top-0 z-50 glass border-b border-border/70 transition-colors duration-300 ${
+        scrolled ? "nav-scrolled" : ""
+      }`}
+    >
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-white shadow-glow">
@@ -50,8 +59,8 @@ export function Navbar() {
             <Link
               key={n.to}
               to={n.to}
-              className="px-3 py-2 text-sm text-text-secondary rounded-lg hover:text-foreground hover:bg-muted transition-colors"
-              activeProps={{ className: "px-3 py-2 text-sm text-foreground font-medium rounded-lg bg-muted" }}
+              className="nav-link px-3 py-2 text-sm text-text-secondary rounded-lg hover:text-foreground hover:bg-muted transition-colors"
+              activeProps={{ className: "nav-link nav-link-active px-3 py-2 text-sm text-foreground font-medium rounded-lg bg-muted" }}
               activeOptions={{ exact: n.to === "/" }}
             >
               {n.label}
@@ -67,7 +76,7 @@ export function Navbar() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search products, brands, ingredients…"
               aria-label="Search"
-              className="w-full h-10 rounded-full border border-border bg-white pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="nav-search w-full h-10 rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </div>
           {suggestions.length > 0 && (
@@ -98,7 +107,7 @@ export function Navbar() {
         <div className="flex items-center gap-1 ml-auto md:ml-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1 rounded-full text-text-secondary">
+              <Button variant="ghost" size="sm" className="nav-icon-btn gap-1 rounded-full text-text-secondary">
                 {currency}
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
@@ -113,13 +122,19 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="ghost" size="icon" aria-label="Theme" className="rounded-full">
-            <Moon className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Toggle theme"
+            className="nav-icon-btn rounded-full"
+            onClick={toggle}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
 
           <Link
             to="/rewards"
-            className="relative inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-sm hover:border-primary/40 transition"
+            className="nav-chip relative inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm hover:border-primary/40 transition"
             aria-label="Rewards"
           >
             <Gift className="h-4 w-4 text-primary" />
@@ -127,7 +142,7 @@ export function Navbar() {
             <span className="text-text-muted hidden sm:inline">pts · {coins}c</span>
           </Link>
 
-          <Button variant="ghost" size="icon" className="rounded-full" aria-label="Profile">
+          <Button variant="ghost" size="icon" className="nav-icon-btn rounded-full" aria-label="Profile">
             <User className="h-4 w-4" />
           </Button>
         </div>

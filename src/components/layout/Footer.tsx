@@ -3,7 +3,7 @@ import { Sparkles, Twitter, Github, Instagram, Linkedin } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-border bg-white">
+    <footer className="mt-24 border-t border-border bg-card">
       <div className="mx-auto max-w-7xl px-6 py-14 grid gap-10 md:grid-cols-5">
         <div className="md:col-span-2">
           <div className="flex items-center gap-2">
