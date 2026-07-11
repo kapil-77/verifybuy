@@ -24,9 +24,9 @@ export function Footer() {
           </div>
         </div>
         {[
-          { title: "Product", links: [["Categories", "/categories"], ["Compare", "/compare"], ["Rewards", "/rewards"], ["AI Assistant", "/assistant"]] },
-          { title: "Company", links: [["About", "/about"], ["Contact", "/about"], ["Careers", "/about"]] },
-          { title: "Legal", links: [["Privacy", "/about"], ["Terms", "/about"], ["Cookies", "/about"]] },
+          { title: "Product", links: [["Categories", "/categories"], ["Compare", "/compare"], ["Rewards", "/rewards"], ["Diet Planner", "/assistant"]] },
+          { title: "Company", links: [["Contact", "/"], ["Careers", "/"]] },
+          { title: "Legal", links: [["Privacy", "/"], ["Terms", "/"], ["Cookies", "/"]] },
         ].map((col) => (
           <div key={col.title}>
             <div className="text-sm font-semibold">{col.title}</div>

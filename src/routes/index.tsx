@@ -54,8 +54,8 @@ function Hero() {
             <Link to="/categories" className="inline-flex items-center gap-2 h-12 rounded-full gradient-primary px-6 text-sm font-medium text-white shadow-glow hover:brightness-110 transition">
               Explore Categories <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link to="/assistant" className="inline-flex items-center gap-2 h-12 rounded-full border border-border bg-white px-6 text-sm font-medium hover:border-foreground/30 transition">
-              <Sparkles className="h-4 w-4 text-primary" /> Ask the AI Assistant
+            <Link to="/assistant" className="inline-flex items-center gap-2 h-12 rounded-full border border-border bg-white px-6 text-sm btn-on-light hover:border-foreground/30 transition">
+              <Sparkles className="h-4 w-4" /> Get your Diet Plan
             </Link>
           </motion.div>
           <div className="mt-10 grid grid-cols-3 gap-6 max-w-lg">
@@ -207,7 +207,7 @@ function Newsletter() {
               type="email" placeholder="you@company.com" aria-label="Email"
               className="flex-1 h-12 rounded-full bg-white/10 border border-white/20 px-5 text-white placeholder-white/60 outline-none focus:bg-white/15"
             />
-            <button className="h-12 rounded-full bg-white px-6 text-primary text-sm font-semibold hover:bg-white/90 transition">Subscribe</button>
+            <button className="h-12 rounded-full bg-white px-6 btn-on-light text-sm hover:bg-white/90 transition">Subscribe</button>
           </form>
         </div>
       </div>
