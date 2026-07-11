@@ -1,12 +1,12 @@
-import { createFileRoute, useServerFn } from "@tanstack/react-start";
-import { createFileRoute as _createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Loader2, Sparkles, Utensils, Droplets, Pill, StickyNote } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { generateDietPlan, type DietPlan } from "@/lib/diet.functions";
 
-export const Route = _createFileRoute("/assistant")({ component: DietPlannerPage });
+export const Route = createFileRoute("/assistant")({ component: DietPlannerPage });
 
 type FormState = {
   age: number;

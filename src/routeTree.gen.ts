@@ -13,7 +13,6 @@ import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AssistantRouteImport } from './routes/assistant'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as ApiElevenlabsTokenRouteImport } from './routes/api/elevenlabs.token'
@@ -38,11 +37,6 @@ const AssistantRoute = AssistantRouteImport.update({
   path: '/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -61,7 +55,6 @@ const ApiElevenlabsTokenRoute = ApiElevenlabsTokenRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/assistant': typeof AssistantRoute
   '/categories': typeof CategoriesRoute
   '/compare': typeof CompareRoute
@@ -71,7 +64,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/assistant': typeof AssistantRoute
   '/categories': typeof CategoriesRoute
   '/compare': typeof CompareRoute
@@ -82,7 +74,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/assistant': typeof AssistantRoute
   '/categories': typeof CategoriesRoute
   '/compare': typeof CompareRoute
@@ -94,7 +85,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/about'
     | '/assistant'
     | '/categories'
     | '/compare'
@@ -104,7 +94,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/about'
     | '/assistant'
     | '/categories'
     | '/compare'
@@ -114,7 +103,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/about'
     | '/assistant'
     | '/categories'
     | '/compare'
@@ -125,7 +113,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
   AssistantRoute: typeof AssistantRoute
   CategoriesRoute: typeof CategoriesRoute
   CompareRoute: typeof CompareRoute
@@ -164,13 +151,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -197,7 +177,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
   AssistantRoute: AssistantRoute,
   CategoriesRoute: CategoriesRoute,
   CompareRoute: CompareRoute,
