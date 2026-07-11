@@ -174,3 +174,11 @@
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
+
+/* Buttons/links sitting on white/light surfaces need bolder, darker text */
+@utility btn-on-light {
+  color: #1E3A8A; /* dark blue for AA contrast on white */
+  font-weight: 600;
+}
+.dark .btn-on-light { color: #C7D2FE; }
+

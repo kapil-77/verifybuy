@@ -18,9 +18,8 @@ const nav = [
   { to: "/", label: "Home" },
   { to: "/categories", label: "Categories" },
   { to: "/compare", label: "Compare" },
-  { to: "/assistant", label: "AI Assistant" },
+  { to: "/assistant", label: "Diet Planner" },
   { to: "/rewards", label: "Rewards" },
-  { to: "/about", label: "About" },
 ];
 
 export function Navbar() {
