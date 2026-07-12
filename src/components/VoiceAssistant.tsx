@@ -1,7 +1,7 @@
-import { useConversation } from "@elevenlabs/react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { useNavigate } from "@tanstack/react-router";
 import { Mic, MicOff, Loader2, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/lib/store";
 import { products } from "@/lib/data";
@@ -25,63 +25,10 @@ function findProductId(slug: string): string | undefined {
   );
 }
 
-export function VoiceAssistant() {
-  const navigate = useNavigate();
-  const { toggleCompare, clearCompare, compare } = useApp();
-  const { toggle: toggleTheme } = useTheme();
+function VoiceAssistantInner() {
   const [connecting, setConnecting] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [lastMessage, setLastMessage] = useState<string>("");
-
-  const conversation = useConversation({
-    clientTools: {
-      navigateTo: (params: { page: string }) => {
-        const target = ROUTES[String(params.page || "").toLowerCase().trim()];
-        if (!target) return `Unknown page: ${params.page}`;
-        navigate({ to: target });
-        return `Navigated to ${target}`;
-      },
-      searchCategory: (params: { query: string }) => {
-        navigate({ to: "/categories", search: { q: String(params.query || "") } as never });
-        return `Filtered categories by ${params.query}`;
-      },
-      openProduct: (params: { slug: string }) => {
-        const slug = String(params.slug || "").trim();
-        if (!slug) return "No product specified";
-        navigate({ to: "/product/$slug", params: { slug } });
-        return `Opened ${slug}`;
-      },
-      addToCompare: (params: { slug: string }) => {
-        const id = findProductId(String(params.slug || ""));
-        if (!id) return `Product not found: ${params.slug}`;
-        if (compare.includes(id)) return "Already in compare";
-        toggleCompare(id);
-        return `Added ${params.slug} to compare`;
-      },
-      removeFromCompare: (params: { slug: string }) => {
-        const id = findProductId(String(params.slug || ""));
-        if (!id || !compare.includes(id)) return "Not in compare";
-        toggleCompare(id);
-        return `Removed ${params.slug}`;
-      },
-      clearCompare: () => { clearCompare(); return "Cleared compare list"; },
-      openCompare: () => { navigate({ to: "/compare" }); return "Opened compare page"; },
-      openDietPlanner: () => { navigate({ to: "/assistant" }); return "Opened diet planner"; },
-      scrollToSection: (params: { id: string }) => {
-        const el = document.getElementById(String(params.id || ""));
-        if (!el) return `Section not found: ${params.id}`;
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        return `Scrolled to ${params.id}`;
-      },
-      toggleTheme: () => { toggleTheme(); return "Toggled theme"; },
-    },
-    onConnect: () => toast.success("Voice assistant connected"),
-    onDisconnect: () => setExpanded(false),
-    onMessage: (m: { message?: string; source?: string }) => {
-      if (m.message) setLastMessage(m.message);
-    },
-    onError: (e) => { console.error(e); toast.error("Voice assistant error"); },
-  });
+  const conversation = useConversation();
 
   const start = useCallback(async () => {
     setConnecting(true);
@@ -136,7 +83,9 @@ export function VoiceAssistant() {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          {lastMessage && <p className="mt-3 line-clamp-4 text-xs text-text-secondary">{lastMessage}</p>}
+          {conversation.message && (
+            <p className="mt-3 line-clamp-4 text-xs text-text-secondary">{conversation.message}</p>
+          )}
           <p className="mt-3 text-[11px] text-text-muted">
             Try: "Open compare" · "Add creatine to compare" · "Open diet planner" · "Toggle theme"
           </p>
@@ -154,6 +103,67 @@ export function VoiceAssistant() {
         {connecting ? <Loader2 className="h-5 w-5 animate-spin" /> : connected ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
       </button>
     </div>
+  );
+}
+
+export function VoiceAssistant() {
+  const navigate = useNavigate();
+  const { toggleCompare, clearCompare, compare } = useApp();
+  const { toggle: toggleTheme } = useTheme();
+
+  const clientTools = useMemo(
+    () => ({
+      navigateTo: (params: { page: string }) => {
+        const target = ROUTES[String(params.page || "").toLowerCase().trim()];
+        if (!target) return `Unknown page: ${params.page}`;
+        navigate({ to: target });
+        return `Navigated to ${target}`;
+      },
+      searchCategory: (params: { query: string }) => {
+        navigate({ to: "/categories", search: { q: String(params.query || "") } as never });
+        return `Filtered categories by ${params.query}`;
+      },
+      openProduct: (params: { slug: string }) => {
+        const slug = String(params.slug || "").trim();
+        if (!slug) return "No product specified";
+        navigate({ to: "/product/$slug", params: { slug } });
+        return `Opened ${slug}`;
+      },
+      addToCompare: (params: { slug: string }) => {
+        const id = findProductId(String(params.slug || ""));
+        if (!id) return `Product not found: ${params.slug}`;
+        if (compare.includes(id)) return "Already in compare";
+        toggleCompare(id);
+        return `Added ${params.slug} to compare`;
+      },
+      removeFromCompare: (params: { slug: string }) => {
+        const id = findProductId(String(params.slug || ""));
+        if (!id || !compare.includes(id)) return "Not in compare";
+        toggleCompare(id);
+        return `Removed ${params.slug}`;
+      },
+      clearCompare: () => { clearCompare(); return "Cleared compare list"; },
+      openCompare: () => { navigate({ to: "/compare" }); return "Opened compare page"; },
+      openDietPlanner: () => { navigate({ to: "/assistant" }); return "Opened diet planner"; },
+      scrollToSection: (params: { id: string }) => {
+        const el = document.getElementById(String(params.id || ""));
+        if (!el) return `Section not found: ${params.id}`;
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return `Scrolled to ${params.id}`;
+      },
+      toggleTheme: () => { toggleTheme(); return "Toggled theme"; },
+    }),
+    [navigate, toggleCompare, clearCompare, compare, toggleTheme],
+  );
+
+  return (
+    <ConversationProvider
+      clientTools={clientTools}
+      onConnect={() => toast.success("Voice assistant connected")}
+      onError={(e) => { console.error(e); toast.error("Voice assistant error"); }}
+    >
+      <VoiceAssistantInner />
+    </ConversationProvider>
   );
 }
 
