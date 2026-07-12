@@ -112,47 +112,64 @@ export function VoiceAssistant() {
   const { toggle: toggleTheme } = useTheme();
 
   const clientTools = useMemo(
-    () => ({
-      navigateTo: (params: { page: string }) => {
-        const target = ROUTES[String(params.page || "").toLowerCase().trim()];
-        if (!target) return `Unknown page: ${params.page}`;
-        navigate({ to: target });
-        return `Navigated to ${target}`;
-      },
-      searchCategory: (params: { query: string }) => {
-        navigate({ to: "/categories", search: { q: String(params.query || "") } as never });
-        return `Filtered categories by ${params.query}`;
-      },
-      openProduct: (params: { slug: string }) => {
-        const slug = String(params.slug || "").trim();
-        if (!slug) return "No product specified";
-        navigate({ to: "/product/$slug", params: { slug } });
-        return `Opened ${slug}`;
-      },
-      addToCompare: (params: { slug: string }) => {
-        const id = findProductId(String(params.slug || ""));
-        if (!id) return `Product not found: ${params.slug}`;
-        if (compare.includes(id)) return "Already in compare";
-        toggleCompare(id);
-        return `Added ${params.slug} to compare`;
-      },
-      removeFromCompare: (params: { slug: string }) => {
-        const id = findProductId(String(params.slug || ""));
-        if (!id || !compare.includes(id)) return "Not in compare";
-        toggleCompare(id);
-        return `Removed ${params.slug}`;
-      },
-      clearCompare: () => { clearCompare(); return "Cleared compare list"; },
-      openCompare: () => { navigate({ to: "/compare" }); return "Opened compare page"; },
-      openDietPlanner: () => { navigate({ to: "/assistant" }); return "Opened diet planner"; },
-      scrollToSection: (params: { id: string }) => {
-        const el = document.getElementById(String(params.id || ""));
-        if (!el) return `Section not found: ${params.id}`;
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        return `Scrolled to ${params.id}`;
-      },
-      toggleTheme: () => { toggleTheme(); return "Toggled theme"; },
-    }),
+    () => {
+      const wrap =
+        <P,>(name: string, fn: (p: P) => string) =>
+        (params: P) => {
+          try {
+            const result = fn((params ?? {}) as P);
+            console.log(`[voice] ${name}`, params, "->", result);
+            toast.message(`🎙 ${name}`, { description: String(result) });
+            return result;
+          } catch (e) {
+            console.error(`[voice] ${name} failed`, e);
+            return `Error running ${name}`;
+          }
+        };
+      return {
+        navigateTo: wrap<{ page: string }>("navigateTo", (p) => {
+          const target = ROUTES[String(p.page || "").toLowerCase().trim()];
+          if (!target) return `Unknown page: ${p.page}`;
+          navigate({ to: target });
+          return `Navigated to ${target}`;
+        }),
+        searchCategory: wrap<{ query: string }>("searchCategory", (p) => {
+          navigate({ to: "/categories", search: { q: String(p.query || "") } as never });
+          return `Filtered categories by ${p.query}`;
+        }),
+        openProduct: wrap<{ slug: string }>("openProduct", (p) => {
+          const raw = String(p.slug || "").trim();
+          if (!raw) return "No product specified";
+          const id = findProductId(raw);
+          const finalSlug = id ? products.find((x) => x.id === id)!.slug : raw;
+          navigate({ to: "/product/$slug", params: { slug: finalSlug } });
+          return `Opened ${finalSlug}`;
+        }),
+        addToCompare: wrap<{ slug: string }>("addToCompare", (p) => {
+          const id = findProductId(String(p.slug || ""));
+          if (!id) return `Product not found: ${p.slug}`;
+          if (compare.includes(id)) return "Already in compare";
+          toggleCompare(id);
+          return `Added ${p.slug} to compare`;
+        }),
+        removeFromCompare: wrap<{ slug: string }>("removeFromCompare", (p) => {
+          const id = findProductId(String(p.slug || ""));
+          if (!id || !compare.includes(id)) return "Not in compare";
+          toggleCompare(id);
+          return `Removed ${p.slug}`;
+        }),
+        clearCompare: wrap<Record<string, never>>("clearCompare", () => { clearCompare(); return "Cleared compare list"; }),
+        openCompare: wrap<Record<string, never>>("openCompare", () => { navigate({ to: "/compare" }); return "Opened compare page"; }),
+        openDietPlanner: wrap<Record<string, never>>("openDietPlanner", () => { navigate({ to: "/assistant" }); return "Opened diet planner"; }),
+        scrollToSection: wrap<{ id: string }>("scrollToSection", (p) => {
+          const el = document.getElementById(String(p.id || ""));
+          if (!el) return `Section not found: ${p.id}`;
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          return `Scrolled to ${p.id}`;
+        }),
+        toggleTheme: wrap<Record<string, never>>("toggleTheme", () => { toggleTheme(); return "Toggled theme"; }),
+      };
+    },
     [navigate, toggleCompare, clearCompare, compare, toggleTheme],
   );
 
@@ -160,7 +177,11 @@ export function VoiceAssistant() {
     <ConversationProvider
       clientTools={clientTools}
       onConnect={() => toast.success("Voice assistant connected")}
-      onError={(e) => { console.error(e); toast.error("Voice assistant error"); }}
+      onUnhandledClientToolCall={(call) => {
+        console.warn("[voice] Unhandled tool call:", call);
+        toast.error(`Unhandled tool: ${call.tool_name}`);
+      }}
+      onError={(e) => { console.error("[voice] error", e); toast.error(typeof e === "string" ? e : "Voice assistant error"); }}
     >
       <VoiceAssistantInner />
     </ConversationProvider>
