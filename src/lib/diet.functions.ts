@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output, NoObjectGeneratedError } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const DietInput = z.object({
   age: z.number().int().min(10).max(100),
@@ -60,15 +60,19 @@ function computeTargets(i: z.infer<typeof DietInput>) {
   return { kcal, protein, carbs, fats };
 }
 
+const gemini = createOpenAICompatible({
+  name: "gemini",
+  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 export const generateDietPlan = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => DietInput.parse(input))
+  .validator((input: unknown) => DietInput.parse(input))
   .handler(async ({ data }): Promise<DietPlan> => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
 
     const t = computeTargets(data);
-    const gateway = createLovableAiGatewayProvider(key);
-    const model = gateway("google/gemini-3-flash-preview");
+    const model = gemini("google/gemini-3-flash-preview");
 
     const prompt = `You are a registered dietitian designing a one-day meal plan.
 

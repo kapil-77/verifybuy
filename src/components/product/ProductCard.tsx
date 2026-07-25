@@ -2,11 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Star, Heart, Scale, ShoppingBag, Share2, Eye, BadgeCheck } from "lucide-react";
 import type { Product } from "@/lib/data";
+import { getBrandName } from "@/lib/data";
 import { useApp, formatPrice } from "@/lib/store";
+import { createActivityEntry } from "@/lib/activity";
+import { ProductImage } from "@/components/ui/ProductImage";
 import { toast } from "sonner";
 
 export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
-  const { currency, compare, toggleCompare, wishlist, toggleWishlist, addCoins, addPoints } = useApp();
+  const { currency, compare, toggleCompare, wishlist, toggleWishlist, addCoins, addPoints, authUser, addActivity, checkBuyCooldown, setBuyCooldown } = useApp();
   const inCompare = compare.includes(p.id);
   const inWishlist = wishlist.includes(p.id);
   const discount = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
@@ -22,11 +25,10 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
       className="group card-soft overflow-hidden flex flex-col"
     >
       <div className="relative aspect-square bg-muted overflow-hidden">
-        <img
+        <ProductImage
           src={p.image}
           alt={p.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
+          className="transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
           {discount > 0 && (
@@ -58,7 +60,7 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
       </div>
 
       <div className="p-4 flex-1 flex flex-col">
-        <div className="text-xs text-text-muted uppercase tracking-wide">{p.brand}</div>
+        <div className="text-xs text-text-muted uppercase tracking-wide">{getBrandName(p.brandId)}</div>
         <Link to="/product/$slug" params={{ slug: p.slug }} className="mt-1 font-medium text-[15px] leading-snug line-clamp-2 hover:text-primary transition">
           {p.title}
         </Link>
@@ -84,8 +86,8 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
             }}
             className={`flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border text-xs font-medium transition ${
               inCompare
-                ? "bg-primary text-white border-primary"
-                : "border-border bg-white hover:border-primary/40 hover:text-primary"
+              ? "bg-primary text-white border-primary"
+                : "border-border bg-primary/10 text-foreground font-semibold hover:border-primary/40 hover:text-primary"
             }`}
           >
             <Scale className="h-3.5 w-3.5" />
@@ -93,9 +95,33 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
           </button>
           <button
             onClick={() => {
-              addCoins(10, `Buy Now · ${p.title}`);
+              // Prevent rapid duplicate clicks
+              if (!checkBuyCooldown(p.id)) {
+                toast.info("Please wait a moment before buying again");
+                return;
+              }
+              setBuyCooldown(p.id);
+
+              // Track activity
+              addActivity(createActivityEntry("clicked_buy", {
+                productId: p.id,
+                productName: p.title,
+              }));
+
+              // Award coins (only for logged-in users)
+              if (authUser) {
+                addCoins(10, `Buy Now · ${p.title}`);
+                addActivity(createActivityEntry("reward_earned", {
+                  productId: p.id,
+                  productName: p.title,
+                  amount: 10,
+                  label: "Buy Now coins",
+                }));
+                toast.success("+10 coins earned");
+              }
+
               setTimeout(() => addPoints(100, `Confirmed purchase · ${p.title}`), 1200);
-              toast.success("+10 coins credited · redirecting to " + p.website);
+              toast.success("Redirecting to " + p.website);
             }}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg gradient-primary text-white text-xs font-medium shadow-soft hover:shadow-glow transition"
           >

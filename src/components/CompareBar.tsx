@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Scale, ArrowRight, X } from "lucide-react";
 import { products } from "@/lib/data";
 import { useApp } from "@/lib/store";
+import { ProductImage } from "@/components/ui/ProductImage";
 
 export function CompareBar() {
   const { compare, toggleCompare, clearCompare } = useApp();
@@ -21,10 +22,10 @@ export function CompareBar() {
         <div className="flex -space-x-2">
           {items.map((p) => (
             <div key={p.id} className="relative group">
-              <img
+              <ProductImage
                 src={p.image}
                 alt={p.title}
-                className="h-10 w-10 rounded-lg border-2 border-white object-cover"
+                className="h-10 w-10 rounded-lg border-2 border-white"
               />
               <button
                 onClick={() => toggleCompare(p.id)}
@@ -37,7 +38,7 @@ export function CompareBar() {
           ))}
         </div>
 
-        <div className="ml-1 hidden sm:block">
+        <div className="ml-1 text-text-muted sm:block">
           <div className="text-sm font-medium">
             {compare.length} selected
           </div>

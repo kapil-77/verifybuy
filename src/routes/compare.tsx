@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, type ReactNode } from "react";
 import { X, Plus, BadgeCheck, Star, Sparkles, Check, Minus } from "lucide-react";
-import { products, type Product } from "@/lib/data";
+import { products, getBrandName, type Product } from "@/lib/data";
 import { useApp, formatPrice } from "@/lib/store";
+import { ProductImage } from "@/components/ui/ProductImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/compare")({ component: ComparePage });
@@ -84,7 +85,7 @@ function ComparePage() {
                     label: "Certifications",
                     render: (p) => (
                       <div className="flex flex-wrap gap-1">
-                        {p.certifications.map((c) => (
+                        {p.certificationIds.map((c) => (
                           <span key={c} className="rounded-full bg-muted px-2 py-0.5 text-[10px]">{c}</span>
                         ))}
                       </div>
@@ -102,7 +103,7 @@ function ComparePage() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {selected.map((p) => (
                   <div key={p.id} className="card-soft p-5">
-                    <div className="text-xs uppercase text-text-muted">{p.brand}</div>
+                    <div className="text-xs uppercase text-text-muted">{getBrandName(p.brandId)}</div>
                     <div className="font-medium leading-snug">{p.title}</div>
 
                     <div className="mt-4">
@@ -141,12 +142,12 @@ function ComparePage() {
               <CompareTable
                 selected={selected}
                 rows={[
-                  { label: "Calories", render: (p) => p.calories, compare: "min", numeric: (p) => p.calories },
-                  { label: "Protein", render: (p) => `${p.protein}g`, compare: "max", numeric: (p) => p.protein },
-                  { label: "Carbs", render: (p) => `${p.carbs}g`, compare: "min", numeric: (p) => p.carbs },
-                  { label: "Sugar", render: (p) => `${p.sugar}g`, compare: "min", numeric: (p) => p.sugar },
-                  { label: "Fat", render: (p) => `${p.fat}g`, compare: "min", numeric: (p) => p.fat },
-                  { label: "Fiber", render: (p) => `${p.fiber}g`, compare: "max", numeric: (p) => p.fiber },
+                  { label: "Calories", render: (p) => p.nutrition.calories, compare: "min", numeric: (p) => p.nutrition.calories },
+                  { label: "Protein", render: (p) => `${p.nutrition.protein}g`, compare: "max", numeric: (p) => p.nutrition.protein },
+                  { label: "Carbs", render: (p) => `${p.nutrition.carbs}g`, compare: "min", numeric: (p) => p.nutrition.carbs },
+                  { label: "Sugar", render: (p) => `${p.nutrition.sugar}g`, compare: "min", numeric: (p) => p.nutrition.sugar },
+                  { label: "Fat", render: (p) => `${p.nutrition.fat}g`, compare: "min", numeric: (p) => p.nutrition.fat },
+                  { label: "Fiber", render: (p) => `${p.nutrition.fiber}g`, compare: "max", numeric: (p) => p.nutrition.fiber },
                 ]}
               />
             </TabsContent>
@@ -164,8 +165,8 @@ function ComparePage() {
                 onClick={() => toggleCompare(p.id)}
                 className="card-soft p-3 text-left transition hover:border-primary/40"
               >
-                <img src={p.image} alt="" className="h-24 w-full rounded-md object-cover" />
-                <div className="mt-2 text-xs text-text-muted">{p.brand}</div>
+                <ProductImage src={p.image} alt={p.title} className="h-24 w-full rounded-md" />
+                <div className="mt-2 text-xs text-text-muted">{getBrandName(p.brandId)}</div>
                 <div className="text-sm font-medium line-clamp-2">{p.title}</div>
                 <div className="mt-2 inline-flex items-center gap-1 text-xs text-primary">
                   <Plus className="h-3 w-3" /> Add
@@ -217,8 +218,8 @@ function ProductHeaderRow({
           >
             <X className="h-3.5 w-3.5" />
           </button>
-          <img src={p.image} alt={p.title} className="h-28 w-full rounded-lg object-cover" />
-          <div className="mt-3 text-[11px] uppercase text-text-muted">{p.brand}</div>
+          <ProductImage src={p.image} alt={p.title} className="h-28 w-full rounded-lg" />
+          <div className="mt-3 text-[11px] uppercase text-text-muted">{getBrandName(p.brandId)}</div>
           <div className="font-medium leading-snug line-clamp-2">{p.title}</div>
         </div>
       ))}
@@ -236,7 +237,7 @@ function CompareTable({ selected, rows }: { selected: Product[]; rows: Row[] }) 
               <th className="w-48 p-4 text-left font-medium text-text-muted">Attribute</th>
               {selected.map((p) => (
                 <th key={p.id} className="min-w-[200px] p-4 text-left text-xs font-medium text-text-secondary">
-                  {p.brand}
+                  {getBrandName(p.brandId)}
                 </th>
               ))}
             </tr>
@@ -288,7 +289,7 @@ function IngredientsMatrix({ selected }: { selected: Product[] }) {
               <th className="p-4 text-left font-medium text-text-muted">Ingredient</th>
               {selected.map((p) => (
                 <th key={p.id} className="min-w-[160px] p-4 text-left text-xs font-medium text-text-secondary">
-                  {p.brand}
+                  {getBrandName(p.brandId)}
                 </th>
               ))}
             </tr>

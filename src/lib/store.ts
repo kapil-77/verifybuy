@@ -2,6 +2,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { currencies, type CurrencyCode } from "./data";
 
+import type { AuthUser } from "./auth";
+import type { ActivityEntry } from "./activity";
+
 type AppState = {
   currency: CurrencyCode;
   setCurrency: (c: CurrencyCode) => void;
@@ -15,6 +18,15 @@ type AppState = {
   toggleWishlist: (id: string) => void;
   addCoins: (n: number, label: string) => void;
   addPoints: (n: number, label: string) => void;
+  authUser: AuthUser | null;
+  setAuthUser: (user: AuthUser) => void;
+  clearAuthUser: () => void;
+  activities: ActivityEntry[];
+  addActivity: (entry: ActivityEntry) => void;
+  clearActivities: () => void;
+  buyCooldowns: Record<string, number>;
+  checkBuyCooldown: (productId: string) => boolean;
+  setBuyCooldown: (productId: string) => void;
 };
 
 export const useApp = create<AppState>()(
@@ -51,6 +63,25 @@ export const useApp = create<AppState>()(
         set((s) => ({
           points: s.points + n,
           history: [{ id: crypto.randomUUID(), label, type: "point", amount: n, at: Date.now() }, ...s.history],
+        })),
+      authUser: null,
+      setAuthUser: (user) => set({ authUser: user }),
+      clearAuthUser: () => set({ authUser: null }),
+      activities: [],
+      addActivity: (entry) =>
+        set((s) => ({
+          activities: [entry, ...s.activities].slice(0, 100),
+        })),
+      clearActivities: () => set({ activities: [] }),
+      buyCooldowns: {},
+      checkBuyCooldown: (productId) => {
+        const cooldown = get().buyCooldowns[productId];
+        if (!cooldown) return true;
+        return Date.now() - cooldown > 2000;
+      },
+      setBuyCooldown: (productId) =>
+        set((s) => ({
+          buyCooldowns: { ...s.buyCooldowns, [productId]: Date.now() },
         })),
     }),
     { name: "compareprime-app" },

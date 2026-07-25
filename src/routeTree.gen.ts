@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RewardsRouteImport } from './routes/rewards'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AssistantRouteImport } from './routes/assistant'
@@ -20,6 +21,11 @@ import { Route as ApiElevenlabsTokenRouteImport } from './routes/api/elevenlabs.
 const RewardsRoute = RewardsRouteImport.update({
   id: '/rewards',
   path: '/rewards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareRoute = CompareRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AssistantRoute
   '/categories': typeof CategoriesRoute
   '/compare': typeof CompareRoute
+  '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/product/$slug': typeof ProductSlugRoute
   '/api/elevenlabs/token': typeof ApiElevenlabsTokenRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/assistant': typeof AssistantRoute
   '/categories': typeof CategoriesRoute
   '/compare': typeof CompareRoute
+  '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/product/$slug': typeof ProductSlugRoute
   '/api/elevenlabs/token': typeof ApiElevenlabsTokenRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/assistant': typeof AssistantRoute
   '/categories': typeof CategoriesRoute
   '/compare': typeof CompareRoute
+  '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/product/$slug': typeof ProductSlugRoute
   '/api/elevenlabs/token': typeof ApiElevenlabsTokenRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/categories'
     | '/compare'
+    | '/profile'
     | '/rewards'
     | '/product/$slug'
     | '/api/elevenlabs/token'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/categories'
     | '/compare'
+    | '/profile'
     | '/rewards'
     | '/product/$slug'
     | '/api/elevenlabs/token'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/categories'
     | '/compare'
+    | '/profile'
     | '/rewards'
     | '/product/$slug'
     | '/api/elevenlabs/token'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   AssistantRoute: typeof AssistantRoute
   CategoriesRoute: typeof CategoriesRoute
   CompareRoute: typeof CompareRoute
+  ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   ProductSlugRoute: typeof ProductSlugRoute
   ApiElevenlabsTokenRoute: typeof ApiElevenlabsTokenRoute
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/rewards'
       fullPath: '/rewards'
       preLoaderRoute: typeof RewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssistantRoute: AssistantRoute,
   CategoriesRoute: CategoriesRoute,
   CompareRoute: CompareRoute,
+  ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   ProductSlugRoute: ProductSlugRoute,
   ApiElevenlabsTokenRoute: ApiElevenlabsTokenRoute,
@@ -187,3 +208,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

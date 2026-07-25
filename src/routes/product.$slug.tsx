@@ -1,8 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Star, BadgeCheck, ShieldCheck, Download, FileCheck, ShoppingBag, Heart, Share2 } from "lucide-react";
-import { products } from "@/lib/data";
+import { products, getBrandName, getCategoryName, getCertificationName } from "@/lib/data";
 import { useApp, formatPrice } from "@/lib/store";
+import { ProductImage } from "@/components/ui/ProductImage";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
@@ -25,21 +26,21 @@ function ProductPage() {
   const { product: p } = Route.useLoaderData();
   const { currency, addCoins, addPoints, toggleWishlist, wishlist } = useApp();
   const priceHistory = Array.from({ length: 8 }, (_, i) => ({ m: `W${i + 1}`, price: p.price + (Math.sin(i) * 6) + i * 0.4 }));
-  const similar = products.filter((x) => x.category === p.category && x.id !== p.id).slice(0, 4);
+  const similar = products.filter((x) => x.categoryId === p.categoryId && x.id !== p.id).slice(0, 4);
   const inWish = wishlist.includes(p.id);
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
-      <div className="text-xs text-text-muted"><Link to="/" className="hover:text-foreground">Home</Link> / <Link to="/categories" className="hover:text-foreground">{p.category}</Link> / <span className="text-foreground">{p.title}</span></div>
+      <div className="text-xs text-text-muted"><Link to="/" className="hover:text-foreground">Home</Link> / <Link to="/categories" className="hover:text-foreground">{getCategoryName(p.categoryId)}</Link> / <span className="text-foreground">{p.title}</span></div>
 
       <div className="mt-6 grid lg:grid-cols-[1fr_360px] gap-10">
         <div>
           <div className="grid md:grid-cols-2 gap-8">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-soft aspect-square overflow-hidden">
-              <img src={p.image} alt={p.title} className="h-full w-full object-cover" />
+              <ProductImage src={p.image} alt={p.title} />
             </motion.div>
             <div>
-              <div className="text-xs uppercase text-text-muted tracking-wide">{p.brand}</div>
+              <div className="text-xs uppercase text-text-muted tracking-wide">{getBrandName(p.brandId)}</div>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight">{p.title}</h1>
               <div className="mt-3 flex items-center gap-2 text-sm">
                 <Star className="h-4 w-4 fill-warning text-warning" />
@@ -56,7 +57,7 @@ function ProductPage() {
               <div className="text-sm text-success mt-1">Save {formatPrice(p.originalPrice - p.price, currency)} · {p.delivery} · via {p.website}</div>
 
               <div className="mt-6 grid grid-cols-4 gap-2 text-center">
-                {[["Protein", `${p.protein}g`], ["Carbs", `${p.carbs}g`], ["Fat", `${p.fat}g`], ["Cals", `${p.calories}`]].map(([k, v]) => (
+                {[["Protein", `${p.nutrition.protein}g`], ["Carbs", `${p.nutrition.carbs}g`], ["Fat", `${p.nutrition.fat}g`], ["Cals", `${p.nutrition.calories}`]].map(([k, v]) => (
                   <div key={k} className="rounded-xl bg-muted p-3">
                     <div className="text-[10px] text-text-muted uppercase">{k}</div>
                     <div className="mt-1 text-sm font-semibold">{v}</div>
@@ -100,9 +101,9 @@ function ProductPage() {
                 </div>
               </div>
               <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                {p.certifications.map((c: string) => (
+                {p.certificationIds.map((c: string) => (
                   <div key={c} className="flex items-center justify-between rounded-xl border border-border p-3">
-                    <div className="flex items-center gap-2 text-sm"><FileCheck className="h-4 w-4 text-primary" /> {c}</div>
+                    <div className="flex items-center gap-2 text-sm"><FileCheck className="h-4 w-4 text-primary" /> {getCertificationName(c)}</div>
                     <button className="text-xs inline-flex items-center gap-1 text-primary hover:underline"><Download className="h-3 w-3" /> Download</button>
                   </div>
                 ))}
@@ -127,9 +128,9 @@ function ProductPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {similar.map((s) => (
                 <Link key={s.id} to="/product/$slug" params={{ slug: s.slug }} className="card-soft overflow-hidden hover:-translate-y-0.5 transition">
-                  <img src={s.image} className="aspect-square w-full object-cover" alt="" />
+                  <ProductImage src={s.image} alt={s.title} className="aspect-square" />
                   <div className="p-3">
-                    <div className="text-xs text-text-muted">{s.brand}</div>
+                  <div className="text-xs text-text-muted">{getBrandName(s.brandId)}</div>
                     <div className="text-sm font-medium line-clamp-1">{s.title}</div>
                     <div className="mt-1 text-sm font-semibold">{formatPrice(s.price, currency)}</div>
                   </div>

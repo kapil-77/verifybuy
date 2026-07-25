@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck, Sparkles, TrendingUp, BadgeCheck, Zap } from "lucide-react";
 import { ProductCard } from "@/components/product/ProductCard";
-import { categories, products } from "@/lib/data";
+import { categories, products, getBrandName, getCategoryName } from "@/lib/data";
 import { useApp, formatPrice } from "@/lib/store";
 import { StarfieldBackground } from "@/components/StarfieldBackground";
 import { useState } from "react";
@@ -39,7 +39,7 @@ function Hero() {
       <div className="mx-auto max-w-7xl px-6 pt-16 pb-24 grid lg:grid-cols-2 gap-16 items-center">
         <div className="glass rounded-3xl border border-border/60 p-8 shadow-elevated">
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-3 py-1.5 text-xs text-text-secondary backdrop-blur">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-border bg-gray/90 px-3 py-1.5 text-xs text-white font-medium shadow-sm">
             <span className="grid h-4 w-4 place-items-center rounded-full bg-success text-white"><BadgeCheck className="h-3 w-3" /></span>
             Verified by 25,000+ shoppers
           </motion.div>
@@ -82,7 +82,7 @@ function Hero() {
             <div className="flex items-center gap-3">
               <img src={products[0].image} className="h-14 w-14 rounded-lg object-cover" alt="" />
               <div className="min-w-0">
-                <div className="text-xs text-text-muted">{products[0].brand}</div>
+                <div className="text-xs text-text-muted">{getBrandName(products[0].brandId)}</div>
                 <div className="text-sm font-medium truncate">{products[0].title}</div>
               </div>
             </div>
@@ -164,7 +164,7 @@ function FeaturedCategories() {
           >
             <div className="text-2xl">{c.icon}</div>
             <div className="mt-2 text-sm font-medium">{c.name}</div>
-            <div className="text-xs text-text-muted">{c.count} items</div>
+            <div className="text-xs text-text-muted">{products.filter((p) => getCategoryName(p.categoryId) === c.name).length} items</div>
           </motion.div>
         ))}
       </div>
