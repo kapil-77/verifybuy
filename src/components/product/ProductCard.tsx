@@ -82,7 +82,7 @@ export function ProductCard({ p, index = 0 }: { p: Product; index?: number }) {
           <button
             onClick={() => {
               toggleCompare(p.id);
-              toast(inCompare ? "Removed from compare" : "Added to compare");
+              toast(inCompare ? "Removed from compare" : "Added to compare", { duration: 1000 });
             }}
             className={`flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border text-xs font-medium transition ${
               inCompare
