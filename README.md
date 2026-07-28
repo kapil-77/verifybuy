@@ -91,6 +91,17 @@ TanStack Start uses file-based routing but with different conventions than Next.
 
 ---
 
+## ✧ Future Work To Do
+
+**1. Products Scrapping pipeline**
+
+🔄 Integrate a robust scraping pipeline to fetch real-time product prices, availability, ratings, and specifications from trusted e-commerce platforms.
+
+**2. Purchase Tracking**
+
+💰 Implement a purchase tracking functionlity to verify successful purchases originating from VerifyBuy and enable reward points, cashback, or referral commissions.
+
+
 ## ✧ Features
 
 ### 🔍 Cross-Store Product Comparison
