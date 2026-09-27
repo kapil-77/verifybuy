@@ -42,6 +42,7 @@
 - [Available Scripts](#-available-scripts)
 - [API Routes](#-api-routes)
 - [AI Capabilities](#-ai-capabilities)
+- [RAG-Powered Product Research](#-rag-powered-product-research)
 - [Authentication](#-authentication)
 - [Deployment](#-deployment)
 - [Roadmap](#-roadmap)
@@ -230,6 +231,7 @@ flowchart TB
 │   │   ├── layout/                 # Navbar, Footer
 │   │   ├── product/                # ProductCard
 │   │   ├── profile/                # ActivityTimeline
+│   │   ├── rag/                    # ResearchPanel — RAG trigger on product pages
 │   │   └── ui/                     # 40+ Radix/shadcn UI components
 │   │
 │   ├── hooks/
@@ -249,6 +251,20 @@ flowchart TB
 │   │   ├── firebase.ts             # Firebase initialization
 │   │   ├── store.ts                # Zustand store (compare, wishlist, points, auth)
 │   │   ├── utils.ts                # cn() utility (clsx + tailwind-merge)
+│   │   ├── rag/                    # Source-grounded RAG research pipeline (server-only)
+│   │   │   ├── types.ts            # Shared pipeline types
+│   │   │   ├── chunking.ts         # Text cleaning + overlap chunking
+│   │   │   ├── embeddings.ts       # Gemini embedder (prod) + hash embedder (tests)
+│   │   │   ├── vector-store.ts     # In-memory vector store (cosine top-k + filters)
+│   │   │   ├── retrieval.ts        # Semantic top-k retrieval + relevance guards
+│   │   │   ├── context.ts          # LLM context + citation construction
+│   │   │   ├── generate.ts         # Source-grounded answer generation (Gemini)
+│   │   │   ├── sources.ts          # Product catalog → source documents
+│   │   │   ├── catalog.ts          # Server-only seed catalog adapter
+│   │   │   ├── ingest.ts           # Clean → chunk → embed → store (dedup)
+│   │   │   ├── pipeline.ts         # Retrieval→generation orchestrator
+│   │   │   ├── research.functions.ts  # Server functions (createServerFn)
+│   │   │   └── *.test.ts           # Unit tests (node:test, no extra deps)
 │   │   └── utils/
 │   │       └── images.ts           # Image path builders
 │   │
@@ -393,6 +409,7 @@ VITE_API_URL=http://localhost:3001
 | `npm run build` | Production build for Cloudflare Workers |
 | `npm run build:dev` | Build in development mode |
 | `npm run preview` | Preview the production build |
+| `npm test` | Run RAG pipeline unit tests (Node built-in runner, no extra deps) |
 | `npm run lint` | Run ESLint across the project |
 | `npm run format` | Auto-format with Prettier |
 
@@ -452,6 +469,118 @@ The voice assistant uses ElevenLabs Conversational AI with custom **client-side 
 | `openDietPlanner` | Navigate to the diet planner |
 | `scrollToSection` | Scroll to a specific section by ID |
 | `toggleTheme` | Toggle dark/light mode |
+
+---
+
+## 🤖 RAG-Powered Product Research
+
+**Retrieval-Augmented Generation (RAG)** turns VeriFy's product/review research flow into a **source-grounded pipeline**: instead of asking Gemini to answer from memory, the app first retrieves the most relevant evidence from a searchable index of the product catalog, then generates an answer that can only cite that evidence — with clickable source URLs.
+
+### Why RAG in VeriFy?
+
+- **No hallucinated product facts.** Answers about ingredients, nutrition, ratings and certifications are generated *only* from retrieved chunks of the real catalog. The prompt forbids outside knowledge and citations are validated server-side before they are returned.
+- **Every claim is traceable.** Source URL + document metadata (`productId`, `brandId`, `categoryId`, source type) travel through the entire pipeline — chunk → vector store → retrieval → context → generation — so every generated claim carries a real, clickable source.
+- **Cheaper & faster.** Only a bounded top-k of relevant chunks (not the whole catalog) is sent to the model, keeping the context small and predictable.
+- **Clean separation.** Retrieval (pure math over vectors + lexical guards) and generation (LLM) are separate modules, so each is testable and replaceable independently. If nothing relevant is found, the LLM is *never called*.
+- **No new infrastructure.** The vector store is an in-memory cosine index — the practical choice for a Cloudflare Worker with a few hundred chunks and no external database.
+
+### Pipeline
+
+```mermaid
+flowchart LR
+    subgraph Sources["Product / review sources"]
+        S1[Catalog products]
+        S2[Certifications]
+    end
+
+    subgraph Ingestion["Ingestion (server, lazy)"]
+        I1[Text extraction & cleaning]
+        I2[Document chunking<br/>max 900 chars + overlap]
+        I3[Embeddings<br/>Gemini text-embedding-004]
+        I4[Vector storage<br/>in-memory cosine store]
+    end
+
+    subgraph Query["Query time"]
+        Q1[User research query<br/>+ metadata filters]
+        Q2[Query embedding]
+        Q3[Semantic retrieval<br/>top-k + min-score + lexical guard]
+        Q4[Context construction<br/>bounded, cited]
+        Q5[LLM generation<br/>Gemini via AI SDK]
+    end
+
+    S1 --> I1
+    S2 --> I1
+    I1 --> I2 --> I3 --> I4
+    Q1 --> Q2 --> Q3
+    Q3 -->|top-k relevant chunks| I4
+    Q3 --> Q4 --> Q5
+    Q4 -->|source URL + metadata + citations| Q5
+    Q5 --> R1[Source-grounded answer + citations]
+```
+
+**Module map (`src/lib/rag/`)**
+
+| Step | Module |
+|---|---|
+| Product/review sources | `sources.ts` (catalog → source documents), `catalog.ts` (seed adapter) |
+| Text extraction & cleaning | `chunking.ts` → `cleanText()` |
+| Document chunking | `chunking.ts` → `chunkText()` / `chunkDocument()` |
+| Embeddings | `embeddings.ts` → `createGeminiEmbedder()` (`text-embedding-004`, sent in ≤64-item batches to respect the API's 100-item limit) |
+| Vector storage | `vector-store.ts` → `InMemoryVectorStore` |
+| Semantic retrieval | `retrieval.ts` → `retrieve()` (top-k + score threshold + lexical relevance guard) |
+| Context construction | `context.ts` → `buildContext()` (char budget, dedupe, canonical citations) |
+| Generation | `generate.ts` → `generateGroundedAnswer()` |
+| Orchestration | `ingest.ts` + `pipeline.ts` |
+| Server API | `research.functions.ts` (`createServerFn`) |
+
+### Server functions
+
+Both are POST server functions in `src/lib/rag/research.functions.ts` — the same `createServerFn` pattern as the diet planner. They run **server-side only**; `GEMINI_API_KEY` never reaches the client.
+
+| Function | Input | Output |
+|---|---|---|
+| `researchProductSummary` | `{ productId }` | `ResearchAnswer` — grounded summary + citations for that product |
+| `answerResearchQuery` | `{ query, filter? }` | `ResearchAnswer` — grounded answer with optional `productId` / `categoryId` / `sourceType` filtering |
+
+### In-app trigger
+
+The product detail page (`/product/$slug`) renders a **ResearchPanel** (`src/components/rag/ResearchPanel.tsx`) under the product header. Pressing **Run AI Research** calls `researchProductSummary` for that product and renders the grounded answer plus its clickable citations. The panel is purely additive — it never auto-runs (no surprise LLM cost) and never fabricates results; empty retrieval and API failures render graceful status messages.
+
+`ResearchAnswer`:
+
+```json
+{
+  "status": "ok",
+  "answer": "ISO100 delivers 25g of protein per 29g serving with zero sugar... [1]",
+  "citations": [
+    {
+      "index": 1,
+      "chunkId": "p7:ingredients::0",
+      "sourceUrl": "https://www.amazon.com/s?k=ISO100+...",
+      "sourceTitle": "ISO100 Hydrolyzed Whey Protein Isolate 5lb",
+      "snippet": "Ingredients: Hydrolyzed Whey Protein Isolate...",
+      "metadata": { "productId": "p7", "brandId": "brand-004", "categoryId": "cat-002" }
+    }
+  ],
+  "grounded": true,
+  "retrievedCount": 4,
+  "contextChunkCount": 2
+}
+```
+
+**Guarantees**
+- Citation objects are derived **only** from chunks the model was actually shown; the model's numeric citation indices are validated server-side and anything else is dropped. No fabricated sources.
+- `sourceUrl` values are real, navigable store listing/search URLs derived deterministically from the product's store + title.
+- Empty retrieval / empty corpus / embedding failure / generation failure all return a structured status (`no_sources`, `empty_retrieval`, `embedding_error`, `generation_error`) with an empty answer — the LLM is never invoked without relevant context.
+- Duplicate documents are skipped via an ingestion ledger; malformed sources (too short, missing URL) are isolated and reported.
+
+### Tests
+
+```bash
+npm test
+```
+
+Runs `src/lib/rag/*.test.ts` with Node's built-in test runner (`node:test`) — **no extra dependencies**. Coverage: chunking (size/overlap/malformed), vector store (cosine, top-k, filters, dedup), retrieval (ranking, thresholds, lexical guard), context construction (citations, budget, dedupe), ingestion (duplicates/invalid) and the end-to-end pipeline (no-LLM short-circuits, generation errors).
 
 ---
 
