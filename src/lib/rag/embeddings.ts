@@ -1,27 +1,32 @@
 /**
  * Embedding providers for the RAG pipeline.
  *
- * - `createGeminiEmbedder` reuses the exact AI infrastructure already used by
- *   the app (Vercel AI SDK + `@ai-sdk/openai-compatible` → Gemini's OpenAI
- *   compatible endpoint) and is the production embedder used server-side.
+ * - `createGeminiEmbedder` calls the Gemini REST embeddings endpoint
+ *   (`POST /v1beta/models/{model}:batchEmbedContents`) directly with a
+ *   server-side `fetch`. This is the documented, stable embeddings API — the
+ *   OpenAI-compatible `/openai/embeddings` route is beta and in current API
+ *   generations only accepts the new `gemini-embedding-*` model family.
  * - `createHashEmbedder` is a deterministic, dependency-free fake used by the
  *   unit tests so tests never call a network API.
  *
  * API keys live server-side only (`process.env.GEMINI_API_KEY`) and are never
- * exposed to the client.
- *
- * Embedding requests are split into small batches because the Gemini endpoint
- * rejects requests with more than 100 items ("at most 100 requests can be in
- * one batch") while the AI SDK provider's default allows up to 2048 — so we
- * batch ourselves before calling `embedMany`.
+ * exposed to the client. The key travels in the query string exactly as the
+ * `:batchEmbedContents` documentation specifies.
  */
-import { embedMany } from "ai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { normalize } from "./vector-store.ts";
-import type { Embedder } from "./types.ts";
+import type { Embedder, EmbedOptions } from "./types.ts";
 
-/** Gemini embedding model exposed through the OpenAI-compatible endpoint. */
-export const EMBEDDING_MODEL = "text-embedding-004";
+/** Gemini text embedding model (gemini-embedding-001 is the current text model). */
+export const EMBEDDING_MODEL = "gemini-embedding-001";
+
+/** Resolve the model id — env-overridable without code changes. */
+export function resolveEmbeddingModel(): string {
+  return process.env.GEMINI_EMBEDDING_MODEL ?? EMBEDDING_MODEL;
+}
+/** Task type for indexing chunks (better retrieval-document vectors). */
+export const EMBEDDING_TASK_DOCUMENT = "RETRIEVAL_DOCUMENT";
+/** Task type for query vectors. */
+export const EMBEDDING_TASK_QUERY = "RETRIEVAL_QUERY";
 /** Dimension count for the deterministic hash embedder (tests / fallbacks). */
 export const HASH_EMBEDDING_DIMENSIONS = 256;
 /**
@@ -30,55 +35,100 @@ export const HASH_EMBEDDING_DIMENSIONS = 256;
  */
 export const MAX_EMBEDDINGS_PER_CALL = 64;
 
-export interface GeminiEmbedderOptions {
-  modelId?: string;
-  /** Max items per Gemini request (defaults to MAX_EMBEDDINGS_PER_CALL). */
-  maxEmbeddingsPerCall?: number;
-  /** Test hook: override how a single batch is embedded (no network in tests). */
-  embedBatch?: (batch: string[]) => Promise<number[][]>;
+/** Minimal response surface needed from the (test-injectable) fetch call. */
+export interface EmbeddingResponseLike {
+  ok: boolean;
+  status: number;
+  text(): Promise<string>;
+  json(): Promise<unknown>;
 }
 
-let cachedProvider: ReturnType<typeof createOpenAICompatible> | null = null;
+/** Fetch compatible with `:batchEmbedContents` (string URL, JSON body). */
+export type EmbeddingFetch = (url: string, init?: RequestInit) => Promise<EmbeddingResponseLike>;
 
-function getGeminiProvider() {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("Missing GEMINI_API_KEY — embeddings require a server-side Gemini API key");
-  }
-  cachedProvider ??= createOpenAICompatible({
-    name: "gemini",
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    apiKey: process.env.GEMINI_API_KEY,
-  });
-  return cachedProvider;
+export interface GeminiEmbedderOptions {
+  /** Model id override (defaults to `resolveEmbeddingModel()`). */
+  modelId?: string;
+  /** Server-side API key override (defaults to `process.env.GEMINI_API_KEY`). */
+  apiKey?: string;
+  /** Max items per Gemini request (defaults to MAX_EMBEDDINGS_PER_CALL). */
+  maxEmbeddingsPerCall?: number;
+  /** Test hook: inject a fetch implementation (no network in tests). */
+  fetchImpl?: EmbeddingFetch;
 }
 
 /**
- * `embed` splits `values` into batches of at most `maxEmbeddingsPerCall`,
- * embeds each batch via Gemini and concatenates the vectors in order. A clean
- * retry is always possible on failure because a corpus is only marked as
- * ingested after all of its batches succeeded.
+ * Production embedder backed by Gemini's `:batchEmbedContents` endpoint.
+ *
+ * `embed()` splits `values` into batches of at most `maxEmbeddingsPerCall`,
+ * posts each batch, extracts `embeddings[].values` and normalizes the vectors
+ * in order. A clean retry is always possible on failure because a corpus is
+ * only marked as ingested after all of its batches succeeded.
  */
 export function createGeminiEmbedder(options: GeminiEmbedderOptions = {}): Embedder {
-  const modelId = options.modelId ?? EMBEDDING_MODEL;
+  const modelId = options.modelId ?? resolveEmbeddingModel();
+  const modelPath = `models/${modelId}`;
   const maxEmbeddingsPerCall = options.maxEmbeddingsPerCall ?? MAX_EMBEDDINGS_PER_CALL;
-  const embedBatch: (batch: string[]) => Promise<number[][]> =
-    options.embedBatch ??
-    (async (batch) => {
-      const { embeddings } = await embedMany({
-        model: getGeminiProvider().embeddingModel(modelId),
-        values: batch,
-      });
-      return embeddings.map((embedding) => Array.from(embedding));
-    });
+  const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
     modelId,
-    async embed(values: string[]): Promise<number[][]> {
+    async embed(values: string[], embedOptions?: EmbedOptions): Promise<number[][]> {
+      const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Missing GEMINI_API_KEY — embeddings require a server-side Gemini API key");
+      }
+
       const inputs = values.filter((v) => v.trim().length > 0);
       if (inputs.length === 0) return [];
-      return embedInBatches(inputs, maxEmbeddingsPerCall, embedBatch);
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:batchEmbedContents?key=${encodeURIComponent(apiKey)}`;
+
+      return embedInBatches(inputs, maxEmbeddingsPerCall, (batch) =>
+        embedBatch(fetchImpl, url, modelPath, batch, embedOptions?.taskType),
+      );
     },
   };
+}
+
+async function embedBatch(
+  fetchImpl: EmbeddingFetch,
+  url: string,
+  modelPath: string,
+  batch: string[],
+  taskType: string | undefined,
+): Promise<number[][]> {
+  const body = {
+    requests: batch.map((text) => ({
+      model: modelPath,
+      taskType,
+      content: { parts: [{ text }] },
+    })),
+  };
+
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Gemini embeddings request failed (${response.status}): ${detail}`);
+  }
+
+  const data = (await response.json()) as { embeddings?: Array<{ values?: number[] }> };
+  const embeddings = data.embeddings;
+  if (!Array.isArray(embeddings) || embeddings.length !== batch.length) {
+    throw new Error(
+      `Gemini embeddings returned ${Array.isArray(embeddings) ? embeddings.length : "invalid"} results for ${batch.length} inputs`,
+    );
+  }
+
+  return embeddings.map((entry) => {
+    const values = entry.values ?? [];
+    return normalize(values) ?? values;
+  });
 }
 
 /**
@@ -112,7 +162,7 @@ export function createHashEmbedder(options: { dimensions?: number } = {}): Embed
   const dimensions = options.dimensions ?? HASH_EMBEDDING_DIMENSIONS;
   return {
     modelId: "deterministic-hash-v1",
-    async embed(values: string[]): Promise<number[][]> {
+    async embed(values: string[], _options?: EmbedOptions): Promise<number[][]> {
       return values.map((value) => hashEmbedding(value, dimensions));
     },
   };

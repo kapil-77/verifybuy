@@ -6,6 +6,7 @@ import { useApp, formatPrice } from "@/lib/store";
 import { ProductImage } from "@/components/ui/ProductImage";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { ResearchPanel } from "@/components/rag/ResearchPanel";
 
 export const Route = createFileRoute("/product/$slug")({
   component: ProductPage,
@@ -71,6 +72,10 @@ function ProductPage() {
               </div>
             </div>
           </div>
+
+          <Section title="AI Product Research">
+            <ResearchPanel productId={p.id} productTitle={p.title} />
+          </Section>
 
           <Section title="Ingredients">
             <div className="flex flex-wrap gap-2">
