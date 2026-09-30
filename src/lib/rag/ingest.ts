@@ -7,6 +7,7 @@
  * embedding API failure does not poison the corpus for the next attempt.
  */
 import { chunkDocument, isValidSource } from "./chunking.ts";
+import { EMBEDDING_TASK_DOCUMENT } from "./embeddings.ts";
 import { InMemoryVectorStore } from "./vector-store.ts";
 import type { ChunkOptions, Embedder, SourceDocument } from "./types.ts";
 
@@ -55,11 +56,16 @@ export async function ingestDocuments(
 
   if (pending.length === 0) return report;
 
-  // Phase 2: embed every pending chunk in one batch. If this throws the
-  // calling pipeline returns an embedding error and `seenDocs` is untouched,
+  // Phase 2: embed every pending chunk in one batched call. If this throws
+  // the calling pipeline returns an embedding error and `seenDocs` is untouched,
   // so the corpus can be retried on the next request.
   const allChunks = pending.flatMap((entry) => entry.chunks);
-  const vectors = await embedder.embed(allChunks.map((chunk) => chunk.text));
+  const vectors = await embedder.embed(
+    allChunks.map((chunk) => chunk.text),
+    {
+      taskType: EMBEDDING_TASK_DOCUMENT,
+    },
+  );
 
   // Phase 3: store + mark seen (only on success).
   let offset = 0;

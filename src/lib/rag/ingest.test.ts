@@ -1,9 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createHashEmbedder } from "./embeddings.ts";
+import { createHashEmbedder, EMBEDDING_TASK_DOCUMENT } from "./embeddings.ts";
 import { ingestDocuments } from "./ingest.ts";
 import { InMemoryVectorStore } from "./vector-store.ts";
 import { makeSource } from "./_fixtures.ts";
+import type { Embedder } from "./types.ts";
 
 const embedder = createHashEmbedder();
 
@@ -72,5 +73,23 @@ describe("ingestDocuments", () => {
     const report = await ingestDocuments([], embedder, store, new Set());
     assert.equal(report.documentsProcessed, 0);
     assert.equal(report.chunksIngested, 0);
+  });
+
+  it("embeds chunks with the RETRIEVAL_DOCUMENT task type", async () => {
+    const store = new InMemoryVectorStore();
+    const seen = new Set<string>();
+    const seenTaskTypes: Array<string | undefined> = [];
+    const inner = createHashEmbedder();
+    const recording: Embedder = {
+      modelId: "recording",
+      async embed(values, options) {
+        seenTaskTypes.push(options?.taskType);
+        return inner.embed(values);
+      },
+    };
+
+    await ingestDocuments([makeSource({ id: "s1", text: LONG_TEXT })], recording, store, seen);
+
+    assert.deepEqual(seenTaskTypes, [EMBEDDING_TASK_DOCUMENT]);
   });
 });
