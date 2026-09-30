@@ -496,7 +496,7 @@ flowchart LR
     subgraph Ingestion["Ingestion (server, lazy)"]
         I1[Text extraction & cleaning]
         I2[Document chunking<br/>max 900 chars + overlap]
-        I3[Embeddings<br/>Gemini text-embedding-004]
+        I3[Embeddings<br/>gemini-embedding-001 via batchEmbedContents]
         I4[Vector storage<br/>in-memory cosine store]
     end
 
@@ -525,7 +525,7 @@ flowchart LR
 | Product/review sources | `sources.ts` (catalog → source documents), `catalog.ts` (seed adapter) |
 | Text extraction & cleaning | `chunking.ts` → `cleanText()` |
 | Document chunking | `chunking.ts` → `chunkText()` / `chunkDocument()` |
-| Embeddings | `embeddings.ts` → `createGeminiEmbedder()` (`text-embedding-004`, sent in ≤64-item batches to respect the API's 100-item limit) |
+| Embeddings | `embeddings.ts` → `createGeminiEmbedder()` (`gemini-embedding-001` via REST `:batchEmbedContents`, ≤64-item batches, `RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY` task types) |
 | Vector storage | `vector-store.ts` → `InMemoryVectorStore` |
 | Semantic retrieval | `retrieval.ts` → `retrieve()` (top-k + score threshold + lexical relevance guard) |
 | Context construction | `context.ts` → `buildContext()` (char budget, dedupe, canonical citations) |
