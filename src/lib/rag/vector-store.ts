@@ -80,7 +80,10 @@ export class InMemoryVectorStore {
 }
 
 /** Check whether a chunk satisfies the retrieval metadata filter. */
-export function matchesFilter(chunk: DocumentChunk, filter: RagFilter | undefined): boolean {
+export function matchesFilter(
+  chunk: Pick<DocumentChunk, "metadata" | "sourceType">,
+  filter: RagFilter | undefined,
+): boolean {
   if (!filter) return true;
   if (filter.productId && chunk.metadata.productId !== filter.productId) return false;
   if (filter.categoryId && chunk.metadata.categoryId !== filter.categoryId) return false;

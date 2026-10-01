@@ -72,7 +72,7 @@ export const generateDietPlan = createServerFn({ method: "POST" })
     if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
 
     const t = computeTargets(data);
-    const model = gemini("google/gemini-3-flash-preview");
+    const model = gemini("gemini-3-flash-preview");
 
     const prompt = `You are a registered dietitian designing a one-day meal plan.
 
@@ -119,12 +119,50 @@ Return the JSON matching the schema.`;
         carbs: t.carbs,
         fats: t.fats,
         meals: [
-          { name: "Breakfast", kcal: Math.round(t.kcal * 0.25), protein: Math.round(t.protein * 0.25), carbs: Math.round(t.carbs * 0.3), fats: Math.round(t.fats * 0.2), items: ["Oats 60g", "Greek yogurt 200g", "Berries 100g", "Honey 1 tsp"] },
-          { name: "Lunch", kcal: Math.round(t.kcal * 0.35), protein: Math.round(t.protein * 0.35), carbs: Math.round(t.carbs * 0.35), fats: Math.round(t.fats * 0.35), items: ["Grilled chicken 180g", "Brown rice 150g cooked", "Mixed veg 200g", "Olive oil 1 tbsp"] },
-          { name: "Snack", kcal: Math.round(t.kcal * 0.15), protein: Math.round(t.protein * 0.15), carbs: Math.round(t.carbs * 0.15), fats: Math.round(t.fats * 0.15), items: ["Whey shake 30g", "Apple 1", "Almonds 20g"] },
-          { name: "Dinner", kcal: Math.round(t.kcal * 0.25), protein: Math.round(t.protein * 0.25), carbs: Math.round(t.carbs * 0.2), fats: Math.round(t.fats * 0.3), items: ["Salmon 180g", "Sweet potato 200g", "Steamed greens 200g"] },
+          {
+            name: "Breakfast",
+            kcal: Math.round(t.kcal * 0.25),
+            protein: Math.round(t.protein * 0.25),
+            carbs: Math.round(t.carbs * 0.3),
+            fats: Math.round(t.fats * 0.2),
+            items: ["Oats 60g", "Greek yogurt 200g", "Berries 100g", "Honey 1 tsp"],
+          },
+          {
+            name: "Lunch",
+            kcal: Math.round(t.kcal * 0.35),
+            protein: Math.round(t.protein * 0.35),
+            carbs: Math.round(t.carbs * 0.35),
+            fats: Math.round(t.fats * 0.35),
+            items: [
+              "Grilled chicken 180g",
+              "Brown rice 150g cooked",
+              "Mixed veg 200g",
+              "Olive oil 1 tbsp",
+            ],
+          },
+          {
+            name: "Snack",
+            kcal: Math.round(t.kcal * 0.15),
+            protein: Math.round(t.protein * 0.15),
+            carbs: Math.round(t.carbs * 0.15),
+            fats: Math.round(t.fats * 0.15),
+            items: ["Whey shake 30g", "Apple 1", "Almonds 20g"],
+          },
+          {
+            name: "Dinner",
+            kcal: Math.round(t.kcal * 0.25),
+            protein: Math.round(t.protein * 0.25),
+            carbs: Math.round(t.carbs * 0.2),
+            fats: Math.round(t.fats * 0.3),
+            items: ["Salmon 180g", "Sweet potato 200g", "Steamed greens 200g"],
+          },
         ],
-        supplements: ["Whey 25g post-workout", "Creatine 5g/day", "Omega-3 1g", "Vitamin D 1000 IU"],
+        supplements: [
+          "Whey 25g post-workout",
+          "Creatine 5g/day",
+          "Omega-3 1g",
+          "Vitamin D 1000 IU",
+        ],
         hydration: "Aim for 3–4L of water spread across the day.",
         notes: "Prioritize protein per meal (30–45g) and sleep 7–9h for recovery.",
       };

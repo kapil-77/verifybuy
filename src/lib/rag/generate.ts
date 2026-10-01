@@ -15,8 +15,13 @@ import { z } from "zod";
 import type { BuiltContext } from "./context.ts";
 import type { Citation } from "./types.ts";
 
-/** Chat model used for source-grounded answers. */
-export const GENERATION_MODEL = "google/gemini-3-flash-preview";
+/** Chat model used for source-grounded answers (no `google/` prefix — the OpenAI-compatible endpoint rejects it). */
+export const GENERATION_MODEL = "gemini-3-flash-preview";
+
+/** Resolve the generation model — env-overridable without code changes. */
+export function resolveGenerationModel(): string {
+  return process.env.GEMINI_GENERATION_MODEL ?? GENERATION_MODEL;
+}
 
 const GeneratedAnswerSchema = z.object({
   answer: z.string().min(1),
@@ -64,7 +69,7 @@ export async function generateGroundedAnswer(
     throw new Error("Refusing to generate without a non-empty source context");
   }
 
-  const model = getGeminiProvider()(options.modelId ?? GENERATION_MODEL);
+  const model = getGeminiProvider()(options.modelId ?? resolveGenerationModel());
   const parsed = await callModel(model, query, context.context, options);
 
   // Enforce strictly that every citation index is backed by a shown chunk.
