@@ -198,6 +198,97 @@ describe("createGeminiEmbedder", () => {
     assert.equal(calls.length, 0);
   });
 
+  it("retries a quota (429) response once, honoring the retry delay", async () => {
+    const calls: FetchCall[] = [];
+    const sleeps: number[] = [];
+    let first = true;
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      const call: FetchCall = {
+        url,
+        body: JSON.parse(String(init?.body ?? "{}")) as FetchCall["body"],
+      };
+      calls.push(call);
+      if (first) {
+        first = false;
+        return fakeResponse(
+          {
+            error: {
+              code: 429,
+              message: "quota exceeded",
+              details: [{ "@type": "google.rpc.RetryInfo", retryDelay: "0.01s" }],
+            },
+          },
+          false,
+          429,
+        );
+      }
+      return fakeResponse({ embeddings: call.body.requests.map(() => ({ values: [3, 4] })) });
+    };
+
+    const embedder = createGeminiEmbedder({
+      apiKey: "secret123",
+      modelId: EMBEDDING_MODEL,
+      fetchImpl,
+      sleepImpl: async (ms: number) => {
+        sleeps.push(ms);
+      },
+      maxRetries: 2,
+    });
+
+    const out = await embedder.embed(["hello"]);
+    assert.equal(calls.length, 2);
+    assert.equal(out.length, 1);
+    assert.deepEqual(sleeps, [10]); // 0.01s -> 10ms
+  });
+
+  it("gives up after maxRetries on a persistent 429", async () => {
+    const calls: FetchCall[] = [];
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      const call: FetchCall = {
+        url,
+        body: JSON.parse(String(init?.body ?? "{}")) as FetchCall["body"],
+      };
+      calls.push(call);
+      return fakeResponse({ error: { code: 429, message: "quota exceeded" } }, false, 429);
+    };
+
+    const embedder = createGeminiEmbedder({
+      apiKey: "secret123",
+      modelId: EMBEDDING_MODEL,
+      fetchImpl,
+      sleepImpl: async () => {},
+      maxRetries: 2,
+    });
+
+    await assert.rejects(embedder.embed(["hello"]), /failed \(429\)/);
+    assert.equal(calls.length, 3); // initial + 2 retries
+  });
+
+  it("does not retry non-quota failures", async () => {
+    const calls: FetchCall[] = [];
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      const call: FetchCall = {
+        url,
+        body: JSON.parse(String(init?.body ?? "{}")) as FetchCall["body"],
+      };
+      calls.push(call);
+      return fakeResponse({ error: { message: "bad request" } }, false, 400);
+    };
+
+    const embedder = createGeminiEmbedder({
+      apiKey: "secret123",
+      modelId: EMBEDDING_MODEL,
+      fetchImpl,
+      sleepImpl: async () => {
+        throw new Error("sleep must not be called");
+      },
+      maxRetries: 3,
+    });
+
+    await assert.rejects(embedder.embed(["hello"]), /failed \(400\)/);
+    assert.equal(calls.length, 1);
+  });
+
   it("createHashEmbedder is deterministic and ignores task options", async () => {
     const embedder = createHashEmbedder();
     const first = await embedder.embed(["same text again"], { taskType: EMBEDDING_TASK_QUERY });

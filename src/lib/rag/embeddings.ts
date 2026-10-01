@@ -55,7 +55,21 @@ export interface GeminiEmbedderOptions {
   maxEmbeddingsPerCall?: number;
   /** Test hook: inject a fetch implementation (no network in tests). */
   fetchImpl?: EmbeddingFetch;
+  /**
+   * Number of attempts for quota (429 / RESOURCE_EXHAUSTED) responses. The
+   * embedder honors the API's retry delay between attempts. Defaults to 3.
+   */
+  maxRetries?: number;
+  /** Upper bound (ms) waited per retry. Defaults to MAX_RETRY_DELAY_MS. */
+  maxRetryDelayMs?: number;
+  /** Test hook: replace the real sleep (no real waits in tests). */
+  sleepImpl?: (ms: number) => Promise<void>;
 }
+
+/** Fallback wait when a 429 response carries no usable retry delay. */
+export const DEFAULT_RETRY_DELAY_MS = 30_000;
+/** Upper bound on a single quota-retry wait. */
+export const MAX_RETRY_DELAY_MS = 60_000;
 
 /**
  * Production embedder backed by Gemini's `:batchEmbedContents` endpoint.
@@ -70,6 +84,15 @@ export function createGeminiEmbedder(options: GeminiEmbedderOptions = {}): Embed
   const modelPath = `models/${modelId}`;
   const maxEmbeddingsPerCall = options.maxEmbeddingsPerCall ?? MAX_EMBEDDINGS_PER_CALL;
   const fetchImpl = options.fetchImpl ?? fetch;
+  const retry: EmbedRetryConfig = {
+    maxRetries: options.maxRetries ?? 3,
+    maxRetryDelayMs: options.maxRetryDelayMs ?? MAX_RETRY_DELAY_MS,
+    sleepImpl:
+      options.sleepImpl ??
+      (async (ms: number) => {
+        await new Promise<void>((resolve) => setTimeout(resolve, ms));
+      }),
+  };
 
   return {
     modelId,
@@ -85,10 +108,16 @@ export function createGeminiEmbedder(options: GeminiEmbedderOptions = {}): Embed
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:batchEmbedContents?key=${encodeURIComponent(apiKey)}`;
 
       return embedInBatches(inputs, maxEmbeddingsPerCall, (batch) =>
-        embedBatch(fetchImpl, url, modelPath, batch, embedOptions?.taskType),
+        embedBatch(fetchImpl, url, modelPath, batch, embedOptions?.taskType, retry),
       );
     },
   };
+}
+
+interface EmbedRetryConfig {
+  maxRetries: number;
+  maxRetryDelayMs: number;
+  sleepImpl: (ms: number) => Promise<void>;
 }
 
 async function embedBatch(
@@ -97,6 +126,7 @@ async function embedBatch(
   modelPath: string,
   batch: string[],
   taskType: string | undefined,
+  retry: EmbedRetryConfig,
 ): Promise<number[][]> {
   const body = {
     requests: batch.map((text) => ({
@@ -106,29 +136,69 @@ async function embedBatch(
     })),
   };
 
-  const response = await fetchImpl(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
+    const response = await fetchImpl(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      const data = (await response.json()) as { embeddings?: Array<{ values?: number[] }> };
+      const embeddings = data.embeddings;
+      if (!Array.isArray(embeddings) || embeddings.length !== batch.length) {
+        throw new Error(
+          `Gemini embeddings returned ${Array.isArray(embeddings) ? embeddings.length : "invalid"} results for ${batch.length} inputs`,
+        );
+      }
+      return embeddings.map((entry) => {
+        const values = entry.values ?? [];
+        return normalize(values) ?? values;
+      });
+    }
+
     const detail = await response.text().catch(() => "");
+    // Quota responses (429 / RESOURCE_EXHAUSTED) carry a retry delay — honor
+    // it and retry the batch, so transient free-tier limits don't fail a run.
+    if (response.status === 429 && attempt < retry.maxRetries) {
+      const waitMs = retryDelayMs(detail, retry.maxRetryDelayMs);
+      await retry.sleepImpl(waitMs);
+      continue;
+    }
+
     throw new Error(`Gemini embeddings request failed (${response.status}): ${detail}`);
   }
+  // Unreachable: the loop either returns or throws on its final attempt.
+  throw new Error("Gemini embeddings request failed");
+}
 
-  const data = (await response.json()) as { embeddings?: Array<{ values?: number[] }> };
-  const embeddings = data.embeddings;
-  if (!Array.isArray(embeddings) || embeddings.length !== batch.length) {
-    throw new Error(
-      `Gemini embeddings returned ${Array.isArray(embeddings) ? embeddings.length : "invalid"} results for ${batch.length} inputs`,
-    );
+/** Extract a quota retry delay (ms) from a 429 body or fall back to the default. */
+function retryDelayMs(body: string, maxDelayMs: number): number {
+  const seconds = parseRetryDelaySeconds(body);
+  const ms = (seconds ?? DEFAULT_RETRY_DELAY_MS / 1000) * 1000;
+  return Math.min(Math.max(0, Math.round(ms)), maxDelayMs);
+}
+
+/**
+ * Parses the `retryDelay` of Gemini's RetryInfo error detail (e.g. "9s") or a
+ * "retry in Xs" hint from the message, returning seconds.
+ */
+function parseRetryDelaySeconds(body: string): number | undefined {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { details?: Array<{ "@type"?: string; retryDelay?: string }> };
+    };
+    for (const detail of parsed.error?.details ?? []) {
+      if (detail?.["@type"]?.includes("RetryInfo") && detail.retryDelay) {
+        const seconds = parseFloat(detail.retryDelay);
+        if (Number.isFinite(seconds)) return seconds;
+      }
+    }
+  } catch {
+    // Not JSON — fall through to the message regex.
   }
-
-  return embeddings.map((entry) => {
-    const values = entry.values ?? [];
-    return normalize(values) ?? values;
-  });
+  const match = body.match(/retry in ([\d.]+)s/i);
+  return match ? parseFloat(match[1]) : undefined;
 }
 
 /**

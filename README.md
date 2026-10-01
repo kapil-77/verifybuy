@@ -451,7 +451,7 @@ The diet planner uses a server function (`createServerFn`) to call Google Gemini
 4. Gemini generates a structured JSON meal plan via `generateText` with `Output.object()`
 5. If AI fails, a deterministic fallback plan is returned immediately
 
-**Model:** `google/gemini-3-flash-preview` via `@ai-sdk/openai-compatible`
+**Model:** `gemini-3-flash-preview` via `@ai-sdk/openai-compatible`
 
 ### Voice Assistant (`VoiceAssistant`)
 
@@ -573,6 +573,7 @@ The product detail page (`/product/$slug`) renders a **ResearchPanel** (`src/com
 - `sourceUrl` values are real, navigable store listing/search URLs derived deterministically from the product's store + title.
 - Empty retrieval / empty corpus / embedding failure / generation failure all return a structured status (`no_sources`, `empty_retrieval`, `embedding_error`, `generation_error`) with an empty answer — the LLM is never invoked without relevant context.
 - Duplicate documents are skipped via an ingestion ledger; malformed sources (too short, missing URL) are isolated and reported.
+- Ingestion is **scoped to the query** (a product research embeds only that product's chunks — a single small request), so free-tier embedding quotas (100 requests/min) are not exhausted by the catalog, and the embedder **automatically retries 429/RESOURCE_EXHAUSTED** responses while honoring the API's retry delay.
 
 ### Tests
 

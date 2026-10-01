@@ -19,7 +19,7 @@ import { createGeminiEmbedder } from "./embeddings.ts";
 import { generateGroundedAnswer } from "./generate.ts";
 import { ingestDocuments } from "./ingest.ts";
 import { DEFAULT_MIN_SCORE, retrieve } from "./retrieval.ts";
-import { InMemoryVectorStore } from "./vector-store.ts";
+import { InMemoryVectorStore, matchesFilter } from "./vector-store.ts";
 import type {
   Embedder,
   RagFilter,
@@ -63,15 +63,24 @@ function seenForStore(store: InMemoryVectorStore): Set<string> {
   return seen;
 }
 
+/**
+ * Incrementally ingest only the sources a query actually needs, honoring its
+ * metadata filter (e.g. a product research only embeds that product's chunks).
+ * A source is ingested once per store; already-ingested sources are skipped.
+ * Ingestion therefore stays tiny for per-product research — crucial for the
+ * Gemini free-tier quota (100 embed requests/min) — and grows lazily as new
+ * scopes are queried.
+ */
 async function ensureCorpus(
   store: InMemoryVectorStore,
   embedder: Embedder,
   sources: SourceDocument[],
+  filter: RagFilter | undefined,
 ): Promise<void> {
   const seen = seenForStore(store);
-  if (store.size === 0 && seen.size === 0) {
-    await ingestDocuments(sources, embedder, store, seen);
-  }
+  const pending = sources.filter((doc) => !seen.has(doc.id) && matchesFilter(doc, filter));
+  if (pending.length === 0) return;
+  await ingestDocuments(pending, embedder, store, seen);
 }
 
 export async function runResearchQuery(
@@ -89,7 +98,7 @@ export async function runResearchQuery(
 
   // Corpus may be empty (e.g. no products) — do not call the LLM.
   try {
-    await ensureCorpus(store, embedder, sources);
+    await ensureCorpus(store, embedder, sources, input.filter);
   } catch (error) {
     return answer("embedding_error", describeError(error, "Failed to embed the source corpus"));
   }
