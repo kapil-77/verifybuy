@@ -529,7 +529,7 @@ flowchart LR
 | Vector storage | `vector-store.ts` → `InMemoryVectorStore` |
 | Semantic retrieval | `retrieval.ts` → `retrieve()` (top-k + score threshold + lexical relevance guard) |
 | Context construction | `context.ts` → `buildContext()` (char budget, dedupe, canonical citations) |
-| Generation | `generate.ts` → `generateGroundedAnswer()` |
+| Generation | `generate.ts` → `generateGroundedAnswer()` (`gemini-3-flash-preview` via AI SDK) |
 | Orchestration | `ingest.ts` + `pipeline.ts` |
 | Server API | `research.functions.ts` (`createServerFn`) |
 
