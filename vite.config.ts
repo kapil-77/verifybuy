@@ -1,5 +1,4 @@
 import tailwindcss from "@tailwindcss/vite";
-import tsConfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, mergeConfig } from "vite";
@@ -10,7 +9,6 @@ export default defineConfig((env) => {
 
   const plugins = [
     tailwindcss(),
-    tsConfigPaths({ projects: ["./tsconfig.json"] }),
     tanstackStart({
       server: { entry: "server" },
       importProtection: {
@@ -54,6 +52,9 @@ export default defineConfig((env) => {
       : {}),
     css: { transformer: "lightningcss" },
     resolve: {
+      // Native tsconfig paths resolution (replaces the former
+      // vite-tsconfig-paths plugin; kept alongside the explicit alias below).
+      tsconfigPaths: true,
       alias: {
         "@": `${process.cwd()}/src`,
       },
