@@ -9,7 +9,7 @@
  * validated server-side against the context that was actually shown, so the
  * pipeline can never emit fabricated sources.
  */
-import { generateText, Output, NoObjectGeneratedError } from "ai";
+import { generateText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import type { BuiltContext } from "./context.ts";
@@ -94,29 +94,40 @@ async function callModel(
   options: GenerateOptions,
 ) {
   const prompt = buildPrompt(query, context);
+  // Plain text output: schema-driven response formats (Output.object) are not
+  // supported by this OpenAI-compatible provider (JSON schema requires
+  // structuredOutputs) and only produce warnings + provider-side JSON handling.
+  // We request text and parse + zod-validate the JSON ourselves below.
+  const result = await generateText({
+    model,
+    prompt,
+    temperature: options.temperature ?? 0.3,
+  });
+  return parseAnswerText(result.text);
+}
+
+/**
+ * Parse the model's text reply into the answer schema. Tolerates prose around
+ * the JSON and markdown code fences; throws a clear error when the reply is not
+ * valid JSON matching the schema.
+ */
+export function parseAnswerText(raw: string): z.infer<typeof GeneratedAnswerSchema> {
+  const jsonText = extractJson(raw);
   try {
-    const result = await generateText({
-      model,
-      prompt,
-      temperature: options.temperature ?? 0.3,
-      output: Output.object({ schema: GeneratedAnswerSchema }),
-    });
-    return result.output;
-  } catch (error) {
-    // The AI SDK can surface valid JSON inside the parse error — salvage it
-    // (mirrors the diet planner's graceful recovery).
-    if (NoObjectGeneratedError.isInstance(error)) {
-      const text = (error as { text?: string }).text ?? "";
-      if (text) {
-        try {
-          return GeneratedAnswerSchema.parse(JSON.parse(text));
-        } catch {
-          /* fall through and rethrow */
-        }
-      }
-    }
-    throw error;
+    return GeneratedAnswerSchema.parse(JSON.parse(jsonText));
+  } catch {
+    throw new Error(`Model did not return a valid JSON research answer: ${raw.slice(0, 300)}`);
   }
+}
+
+/** Locate the JSON object in a model reply (strip fences / surrounding prose). */
+function extractJson(text: string): string {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced && fenced[1].trim().startsWith("{")) return fenced[1].trim();
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  return start >= 0 && end > start ? trimmed.slice(start, end + 1) : trimmed;
 }
 
 export function buildPrompt(query: string, context: string): string {
