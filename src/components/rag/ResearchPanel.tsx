@@ -1,13 +1,9 @@
 /**
  * ResearchPanel — the in-app trigger for the RAG pipeline.
  *
- * Additive component rendered on the product detail page. Calls the
- * `researchProductSummary` server function (which runs the full
+ * Calls the `researchProductSummary` server function (which runs the full
  * query → retrieval → context → LLM → cited-answer flow server-side) and
  * renders the source-grounded answer with its citations.
- *
- * The panel never fabricates content: it renders exactly what the pipeline
- * returned, including graceful statuses for empty retrieval / API failures.
  */
 import { useState } from "react";
 import { motion } from "framer-motion";

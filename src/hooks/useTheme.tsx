@@ -32,5 +32,4 @@ export function useTheme() {
   return ctx;
 }
 
-// Runs before hydration to apply saved theme and avoid a flash.
 export const themeBootstrapScript = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
