@@ -218,12 +218,40 @@ describe("scoped ingestion", () => {
     );
     assert.equal(r2.calls.length, 2);
 
-    // 3) Re-running an already-scoped query makes ZERO ingestion calls —
-    // only the single query-embedding call happens.
+    // 3) Re-running an identical query hits the answer cache — zero API calls
+    // (no ingestion, no query embedding) and no store growth.
     const r3: Recorder = { calls: [], taskTypes: [] };
     const result3 = await run(r3, "whey protein chocolate", { productId: "p1" });
     assert.equal(result3.status, "ok");
-    assert.equal(r3.calls.length, 1);
+    assert.equal(r3.calls.length, 0);
     assert.equal(store.size, ids2.length); // no store growth
+  });
+
+  it("serves identical repeat queries from cache with zero API calls", async () => {
+    const store = new InMemoryVectorStore();
+    const run = (recorder: Recorder, query: string, filter: { productId: string }) =>
+      runResearchQuery(
+        { query, filter },
+        {
+          store,
+          sources,
+          embedder: recordingEmbedder(recorder),
+          generator: fakeGenerator,
+          minScore: 0.01,
+        },
+      );
+
+    const r1: Recorder = { calls: [], taskTypes: [] };
+    const first = await run(r1, "whey protein chocolate", { productId: "p1" });
+
+    const r2: Recorder = { calls: [], taskTypes: [] };
+    const second = await run(r2, "whey protein chocolate", { productId: "p1" });
+
+    assert.equal(first.status, "ok");
+    assert.equal(second.status, "ok");
+    assert.equal(r1.calls.length, 2); // ingestion + query embedding
+    assert.equal(r2.calls.length, 0); // cache hit — zero API calls
+    assert.equal(second.answer, first.answer);
+    assert.deepEqual(second.citations, first.citations);
   });
 });

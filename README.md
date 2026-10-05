@@ -574,6 +574,7 @@ The product detail page (`/product/$slug`) renders a **ResearchPanel** (`src/com
 - Empty retrieval / empty corpus / embedding failure / generation failure all return a structured status (`no_sources`, `empty_retrieval`, `embedding_error`, `generation_error`) with an empty answer — the LLM is never invoked without relevant context.
 - Duplicate documents are skipped via an ingestion ledger; malformed sources (too short, missing URL) are isolated and reported.
 - Ingestion is **scoped to the query** (a product research embeds only that product's chunks — a single small request), so free-tier embedding quotas (100 requests/min) are not exhausted by the catalog, and the embedder **automatically retries 429/RESOURCE_EXHAUSTED** responses while honoring the API's retry delay.
+- Answers are **cached per isolate** (bounded LRU): repeating an identical research question short-circuits the pipeline — zero embedding and zero LLM calls on repeat clicks for the same product.
 
 ### Tests
 

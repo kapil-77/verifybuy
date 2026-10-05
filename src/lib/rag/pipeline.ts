@@ -14,6 +14,7 @@
  * fabricated response.
  */
 import { buildContext } from "./context.ts";
+import { createAnswerCache, type AnswerCache } from "./cache.ts";
 import { cleanText } from "./chunking.ts";
 import { createGeminiEmbedder } from "./embeddings.ts";
 import { generateGroundedAnswer } from "./generate.ts";
@@ -33,6 +34,7 @@ export interface PipelineOptions {
   store?: InMemoryVectorStore;
   generator?: typeof generateGroundedAnswer;
   sources?: SourceDocument[];
+  answerCache?: AnswerCache;
   topK?: number;
   minScore?: number;
   minSharedTokens?: number;
@@ -61,6 +63,44 @@ function seenForStore(store: InMemoryVectorStore): Set<string> {
     seenSourcesByStore.set(store, seen);
   }
   return seen;
+}
+
+/** Per-store answer cache (isolates test instances from each other). */
+const answerCachesByStore = new WeakMap<InMemoryVectorStore, AnswerCache>();
+
+function answerCacheFor(store: InMemoryVectorStore): AnswerCache {
+  let cache = answerCachesByStore.get(store);
+  if (!cache) {
+    cache = createAnswerCache();
+    answerCachesByStore.set(store, cache);
+  }
+  return cache;
+}
+
+/**
+ * Stable cache key: normalized query + metadata filter + scope fingerprint.
+ * The fingerprint is the sorted ids of this query's *relevant* ingested
+ * sources (the same docs `ensureCorpus` scopes by), so per-product answers
+ * stay cached even when other products get ingested, while a query that now
+ * matches newly-ingested sources automatically recomputes.
+ */
+function answerCacheKey(
+  query: string,
+  filter: RagFilter | undefined,
+  seen: ReadonlySet<string>,
+  sources: SourceDocument[],
+): string {
+  const filterParts: string[] = [];
+  if (filter) {
+    if (filter.productId) filterParts.push(`productId=${filter.productId}`);
+    if (filter.categoryId) filterParts.push(`categoryId=${filter.categoryId}`);
+    if (filter.sourceType) filterParts.push(`sourceType=${filter.sourceType}`);
+  }
+  const relevant = sources
+    .filter((doc) => seen.has(doc.id) && matchesFilter(doc, filter))
+    .map((doc) => doc.id)
+    .sort();
+  return `${query.toLowerCase()}\u0000${filterParts.join(",")}\u0000${relevant.join("|")}`;
 }
 
 /**
@@ -95,6 +135,7 @@ export async function runResearchQuery(
   // `sources` are supplied by the caller (the server functions pass the seed
   // catalog). An empty source list yields a graceful `no_sources` result.
   const sources = options.sources ?? [];
+  const cache = options.answerCache ?? answerCacheFor(store);
 
   // Corpus may be empty (e.g. no products) — do not call the LLM.
   try {
@@ -106,6 +147,12 @@ export async function runResearchQuery(
   if (store.size === 0) {
     return answer("no_sources", "No source documents are available to research from.");
   }
+
+  // Answer cache: an identical query within the same corpus scope returns the
+  // previous grounded answer instantly — zero embedding and zero LLM calls.
+  const cacheKey = answerCacheKey(query, input.filter, seenForStore(store), sources);
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
 
   // Retrieval phase.
   let retrieved: Awaited<ReturnType<typeof retrieve>>;
@@ -137,7 +184,7 @@ export async function runResearchQuery(
   const generator = options.generator ?? generateGroundedAnswer;
   try {
     const result = await generator(query, context);
-    return {
+    const researchAnswer: ResearchAnswer = {
       answer: result.answer,
       citations: result.citations,
       grounded: result.grounded,
@@ -145,6 +192,8 @@ export async function runResearchQuery(
       retrievedCount: retrieved.length,
       contextChunkCount: context.chunks.length,
     };
+    cache.set(cacheKey, researchAnswer);
+    return researchAnswer;
   } catch (error) {
     return answer("generation_error", describeError(error, "The AI generation step failed"));
   }
